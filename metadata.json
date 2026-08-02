@@ -1,0 +1,6 @@
+{
+  "name": "Aibra Academy",
+  "description": "Plateforme d'offres d'emploi et de stages pour les jeunes et diplômés au Maroc.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
