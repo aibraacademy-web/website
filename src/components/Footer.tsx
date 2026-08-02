@@ -60,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Facebook className="w-4 h-4" />
               </a>
               <a 
-                href="https://linkedin.com" 
+                href="https://www.linkedin.com/company/aibra-academy/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:text-emerald-400 text-slate-400 flex items-center justify-center transition-all"
@@ -162,28 +162,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ul className="space-y-3 text-sm text-slate-400">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>Casablanca Nearshore & Agdal Rabat, Maroc</span>
+                <span>Agadir, Agadir Bay, Maroc</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
-                <a href="mailto:contact@aibra-academy.ma" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  contact@aibra-academy.ma
+                <a href="mailto:aibraacademy@gmail.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
+                  aibraacademy@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-                <a href="tel:0637539047" className="hover:text-emerald-400 transition-colors">0637539047</a>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Linkedin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-white">El Hassan Boumedyane</p>
-                  <p className="text-slate-400 text-xs">HR Manager</p>
-                  <a href="https://www.linkedin.com/in/hassanhr" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-400 hover:text-sky-300 text-sm mt-1">
-                    <Linkedin className="w-3.5 h-3.5" />
-                    LinkedIn
-                  </a>
-                </div>
+                <Linkedin className="w-4 h-4 text-sky-400 shrink-0" />
+                <a href="https://www.linkedin.com/company/aibra-academy/" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
+                  LinkedIn Aibra Academy
+                </a>
               </li>
             </ul>
 

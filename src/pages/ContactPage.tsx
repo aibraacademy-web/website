@@ -9,7 +9,8 @@ import {
   ChevronDown, 
   ChevronUp, 
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Linkedin
 } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
@@ -95,8 +96,8 @@ export const ContactPage: React.FC = () => {
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="font-bold text-white">Adresses :</p>
-                    <p className="text-slate-400">Casablanca Nearshore & Agdal Rabat, Maroc</p>
+                    <p className="font-bold text-white">Adresse :</p>
+                    <p className="text-slate-400">Agadir, Agadir Bay, Maroc</p>
                   </div>
                 </li>
 
@@ -106,29 +107,19 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-bold text-white">Email direct :</p>
-                    <a href="mailto:contact@aibra-academy.ma" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
-                      contact@aibra-academy.ma
+                    <a href="mailto:aibraacademy@gmail.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                      aibraacademy@gmail.com
                     </a>
                   </div>
                 </li>
 
                 <li className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white">Téléphone :</p>
-                    <p className="text-slate-300"><a href="tel:0637539047" className="hover:underline">0637539047</a></p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-sky-700/10 text-sky-300 flex items-center justify-center shrink-0">
                     <Linkedin className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="font-bold text-white">El Hassan Boumedyane</p>
-                    <p className="text-slate-300 text-xs">HR Manager</p>
-                    <a href="https://www.linkedin.com/in/hassanhr" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-sky-300 text-sm">Voir le profil LinkedIn</a>
+                    <p className="font-bold text-white">LinkedIn :</p>
+                    <a href="https://www.linkedin.com/company/aibra-academy/" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-sky-300 text-sm">Page LinkedIn officielle</a>
                   </div>
                 </li>
               </ul>
