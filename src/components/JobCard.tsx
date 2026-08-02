@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { JobOffer } from '../types';
 import { 
   Building2, 
@@ -9,7 +9,7 @@ import {
   ArrowRight, 
   Briefcase, 
   CheckCircle2,
-  Share2
+  Link2
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -29,6 +29,14 @@ export const JobCard: React.FC<JobCardProps> = ({
   onSelectJob,
   layout = 'grid'
 }) => {
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/offres/${job.id}`);
+    setCopiedLink(true);
+    window.setTimeout(() => setCopiedLink(false), 2000);
+  };
+
   // Contract badge styling
   const getContractBadge = (contract: string) => {
     switch (contract.toLowerCase()) {
@@ -148,6 +156,15 @@ export const JobCard: React.FC<JobCardProps> = ({
         >
           <span>Détails</span>
           <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+
+        <button
+          onClick={handleCopyLink}
+          className="flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-emerald-700 px-3 py-2 rounded-xl hover:bg-slate-200/60 transition-colors"
+          title="Copier le lien de l'offre"
+        >
+          <Link2 className={`w-4 h-4 ${copiedLink ? 'text-emerald-600' : 'text-slate-500'}`} />
+          <span>{copiedLink ? 'Copié !' : 'Copier lien'}</span>
         </button>
 
       </div>

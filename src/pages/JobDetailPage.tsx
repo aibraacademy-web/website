@@ -17,7 +17,8 @@ import {
   Award, 
   Coins, 
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  Link2
 } from 'lucide-react';
 
 interface JobDetailPageProps {
@@ -45,7 +46,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
   const isSaved = savedJobIds.includes(job.id);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(`${window.location.origin}/offres/${job.id}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };
@@ -307,7 +308,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                     onClick={handleCopyLink}
                     className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700"
                   >
-                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link2 className="w-3.5 h-3.5 text-slate-500" />}
                     <span>{copiedLink ? 'Copié !' : 'Copier lien'}</span>
                   </button>
 

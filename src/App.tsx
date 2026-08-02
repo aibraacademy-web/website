@@ -39,7 +39,7 @@ export default function App() {
     if (cleanPath === 'admin') {
       return { tab: authenticated ? 'admin-dashboard' : 'admin-login' };
     }
-    if (cleanPath.startsWith('jobs/')) {
+    if (cleanPath.startsWith('offres/')) {
       const [, id] = cleanPath.split('/');
       return { tab: 'job-detail', jobId: id };
     }
@@ -72,7 +72,7 @@ export default function App() {
 
   const getPathFromTab = (tab: string, jobId?: string) => {
     if (tab === 'jobs') return '/jobs';
-    if (tab === 'job-detail' && jobId) return `/jobs/${jobId}`;
+    if (tab === 'job-detail' && jobId) return `/offres/${jobId}`;
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
