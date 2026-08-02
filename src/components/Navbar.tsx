@@ -53,17 +53,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           
-          {/* Logo Aibra Academy */}
+          {/* Logo Aibra Academy (image) */}
           <button 
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-3 group text-left focus:outline-none"
             aria-label="Aibra Academy Accueil"
           >
-            <div className="relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-900/40 group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-6 h-6 text-white" />
-              <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-emerald-400">
-                <Briefcase className="w-3 h-3 text-emerald-400" />
-              </div>
+            <div className="flex items-center justify-center w-12 h-12 sm:w-12 sm:h-12 rounded-md overflow-hidden bg-transparent group-hover:scale-105 transition-transform">
+              <img src="/aibra-logo.png" alt="Aibra Academy" className="h-10 sm:h-12 w-auto object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
