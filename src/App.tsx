@@ -212,16 +212,27 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'job-detail' && selectedJob && (
-          <JobDetailPage
-            job={selectedJob}
-            allJobs={jobs}
-            savedJobIds={savedJobIds}
-            onToggleSave={handleToggleSave}
-            onOpenMailModal={handleOpenMailModal}
-            onSelectJob={handleSelectJob}
-            onBack={() => handleNavigate('jobs')}
-          />
+        {currentTab === 'job-detail' && (
+          selectedJob ? (
+            <JobDetailPage
+              job={selectedJob}
+              allJobs={jobs}
+              savedJobIds={savedJobIds}
+              onToggleSave={handleToggleSave}
+              onOpenMailModal={handleOpenMailModal}
+              onSelectJob={handleSelectJob}
+              onBack={() => handleNavigate('jobs')}
+            />
+          ) : (
+            <JobListingsPage
+              jobs={jobs}
+              initialFilters={jobFilters}
+              savedJobIds={savedJobIds}
+              onToggleSave={handleToggleSave}
+              onOpenMailModal={handleOpenMailModal}
+              onSelectJob={handleSelectJob}
+            />
+          )
         )}
 
         {currentTab === 'admin-login' && !isAdminAuthenticated && (
