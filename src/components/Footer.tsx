@@ -107,14 +107,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   Toutes les offres d'emploi
                 </button>
               </li>
-              <li>
-                <button 
-                  onClick={() => onNavigate('admin-login')} 
-                  className="hover:text-emerald-400 transition-colors text-slate-500 font-medium flex items-center gap-1"
-                >
-                  <span>🔒 Espace Admin</span>
-                </button>
-              </li>
+
               <li>
                 <button 
                   onClick={() => onNavigate('about')} 
