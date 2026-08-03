@@ -43,7 +43,7 @@ export default function App() {
       const [, id] = cleanPath.split('/');
       return { tab: 'job-detail', jobId: id };
     }
-    if (cleanPath === 'jobs') {
+    if (cleanPath === 'offres' || cleanPath === 'jobs') {
       return { tab: 'jobs' };
     }
     if (cleanPath.startsWith('about')) {
@@ -71,7 +71,7 @@ export default function App() {
   }, [isAdminAuthenticated]);
 
   const getPathFromTab = (tab: string, jobId?: string) => {
-    if (tab === 'jobs') return '/jobs';
+    if (tab === 'jobs') return '/offres';
     if (tab === 'job-detail' && jobId) return `/offres/${jobId}`;
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
