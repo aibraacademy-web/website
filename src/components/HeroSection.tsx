@@ -54,20 +54,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onSearch, onExplore })
             {/* Top Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-inner">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>Tremplin Emploi & Stages PFE pour la Jeunesse Marocaine</span>
+              <span>Cabinet de Recrutement &amp; Nearshore RH à Agadir</span>
             </div>
 
             {/* Main Catchy Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-serif">
-              Trouvez le poste qui <br className="hidden sm:inline" />
+              Solutions RH Nearshore &amp; <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-200">
-                vous correspond au Maroc
+                Recrutement au Maroc
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0">
-              Aibra Academy simplifie l'accès à l'emploi. Postulez directement par email auprès des recruteurs à Casablanca, Rabat, Tanger et dans toutes les régions sans aucun intermédiaire.
+              Aibra Academy est votre cabinet de recrutement de référence à Agadir. Nous accompagnons les entreprises dans leur outsourcing RH et connectons les jeunes diplômés du Maroc aux meilleures opportunités de carrière.
             </p>
 
             {/* Main Interactive Search Form */}

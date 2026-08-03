@@ -133,13 +133,13 @@ export const HomePage: React.FC<HomePageProps> = ({
           
           <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800">
-              Notre Mission Maroc
+              Expertise RH Nearshore &amp; Recrutement Maroc
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold font-serif text-white">
-              Pourquoi choisir Aibra Academy ?
+              Pourquoi choisir Aibra Academy comme partenaire RH ?
             </h2>
             <p className="text-slate-300 text-sm leading-relaxed">
-              Une plateforme pensée spécialement pour rapprocher la jeunesse marocaine des opportunités professionnelles sans barrière ni coût.
+              Cabinet de recrutement engagé à Agadir et à travers le Maroc, nous rapprochons les candidats qualifiés et les entreprises grâce à nos solutions RH nearshore et notre service de talent acquisition.
             </p>
           </div>
 

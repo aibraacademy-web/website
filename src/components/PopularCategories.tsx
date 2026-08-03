@@ -90,10 +90,10 @@ export const PopularCategories: React.FC<PopularCategoriesProps> = ({
               <span>Secteurs Porteurs</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-serif">
-              Catégories populaires
+              Secteurs clés du recrutement au Maroc
             </h2>
             <p className="text-slate-600 text-sm mt-1 max-w-xl">
-              Explorez les domaines d'activité qui recrutent le plus de jeunes diplômés et stagiaires au Maroc.
+              Explorez les pôles de talent acquisition et de services RH nearshore qui recrutent le plus de jeunes diplômés à Agadir et à travers le Maroc.
             </p>
           </div>
 

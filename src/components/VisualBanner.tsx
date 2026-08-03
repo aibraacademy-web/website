@@ -17,7 +17,7 @@ export const VisualBanner: React.FC = () => {
           <div className="relative group overflow-hidden rounded-2xl shadow-md h-64 md:h-80">
             <img 
               src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-              alt="Jeunes professionnels au travail" 
+              alt="Cabinet de recrutement nearshore à Agadir - Équipe de professionnels RH en réunion" 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end p-6">
@@ -28,18 +28,18 @@ export const VisualBanner: React.FC = () => {
           <div className="relative group overflow-hidden rounded-2xl shadow-md h-64 md:h-80 md:-translate-y-4">
             <img 
               src="https://images.unsplash.com/photo-1556761175-5973dc0f32d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-              alt="Entretien et poignée de main" 
+              alt="Recrutement de jeunes diplômés au Maroc - Entretien et talent acquisition RH" 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end p-6">
-              <h3 className="text-white font-bold text-lg">Opportunités & Recrutement</h3>
+              <h3 className="text-white font-bold text-lg">Opportunités &amp; Recrutement</h3>
             </div>
           </div>
 
           <div className="relative group overflow-hidden rounded-2xl shadow-md h-64 md:h-80">
             <img 
               src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-              alt="Bureau moderne et innovation" 
+              alt="Solutions RH et outsourcing nearshore à Agadir Maroc - Bureau moderne" 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end p-6">

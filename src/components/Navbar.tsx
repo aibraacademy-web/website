@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label="Aibra Academy Accueil"
           >
             <div className="flex items-center justify-center w-12 h-12 sm:w-12 sm:h-12 rounded-md overflow-hidden bg-transparent group-hover:scale-105 transition-transform">
-              <img src="/aibra-logo.png" alt="Aibra Academy" className="h-10 sm:h-12 w-auto object-contain" />
+              <img src="/aibra-logo.png" alt="Aibra Academy - Cabinet de recrutement &amp; RH nearshore à Agadir" className="h-10 sm:h-12 w-auto object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
