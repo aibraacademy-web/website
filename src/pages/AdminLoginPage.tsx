@@ -11,7 +11,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin2026') {
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'Aibra@2026';
+    if (password === adminPassword) {
       onLogin();
     } else {
       setError(true);
