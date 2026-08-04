@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { JobOffer } from '../types';
-import { generateMailtoUrl, incrementJobApplications } from '../services/jobService';
+import { generateMailtoUrl } from '../services/jobService';
 import { 
   X, 
   Mail, 
@@ -37,7 +37,6 @@ export const MailtoModal: React.FC<MailtoModalProps> = ({ job, isOpen, onClose }
   };
 
   const handleLaunchEmail = () => {
-    incrementJobApplications(job.id);
     setSentNotice(true);
     window.open(mailtoUrl, '_blank');
   };

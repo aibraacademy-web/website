@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navItems = [
+  const navItems: { id: string; label: string; icon?: React.FC<{ className?: string }>; badge?: string }[] = [
     { id: 'home', label: 'Accueil' },
     { id: 'jobs', label: 'Offres d\'emploi', badge: 'Nouveau' },
     { id: 'about', label: 'À propos' },

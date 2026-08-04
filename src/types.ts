@@ -40,11 +40,13 @@ export interface JobOffer {
   missions: string[];
   profile: string[];
   contactEmail: string;
+  contactPhone?: string;
   contactSubject?: string;
   originalLink?: string;
   salaryRange?: string;
   experienceLevel: 'Débutant (0-1 an)' | '1 à 3 ans' | '3 à 5 ans' | 'Stage PFE' | 'Tous niveaux';
   featured?: boolean;
+  isActive?: boolean;
   viewsCount?: number;
   applicationsCount?: number;
 }
@@ -64,3 +66,99 @@ export interface StatisticsData {
   totalYouthRegistered: number;
   totalApplicationsSent: number;
 }
+
+// ─── Supabase DB Row Type (snake_case) ────────────────────────────────────────
+
+export interface DbJobOffer {
+  id: string;
+  created_at: string;
+  title: string;
+  company: string;
+  description: string;
+  location: string;
+  contact_email: string;
+  contact_phone: string | null;
+  logo_url: string | null;
+  is_active: boolean;
+  category: string;
+  contract_type: string;
+  experience_level: string;
+  salary_range: string | null;
+  company_initials: string;
+  missions: string[];
+  profile_requirements: string[];
+  contact_subject: string | null;
+  original_link: string | null;
+  featured: boolean;
+  views_count: number;
+  applications_count: number;
+}
+
+// ─── Conversion helpers ────────────────────────────────────────────────────────
+
+/** Formate une date ISO en affichage relatif ou absolu */
+const formatPublishedAt = (isoDate: string): string => {
+  const now = new Date();
+  const date = new Date(isoDate);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays} jours`;
+  return date.toLocaleDateString('fr-MA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+/** Convertit une ligne DB → JobOffer applicatif */
+export const dbToJobOffer = (row: DbJobOffer): JobOffer => ({
+  id: row.id,
+  title: row.title,
+  company: row.company,
+  companyLogo: row.logo_url ?? undefined,
+  companyInitials: row.company_initials,
+  city: row.location as MoroccanCity,
+  contractType: row.contract_type as ContractType,
+  category: row.category as JobCategory,
+  publishedAt: formatPublishedAt(row.created_at),
+  createdAtISO: row.created_at,
+  description: row.description,
+  missions: Array.isArray(row.missions) ? row.missions : [],
+  profile: Array.isArray(row.profile_requirements) ? row.profile_requirements : [],
+  contactEmail: row.contact_email,
+  contactPhone: row.contact_phone ?? undefined,
+  contactSubject: row.contact_subject ?? undefined,
+  originalLink: row.original_link ?? undefined,
+  salaryRange: row.salary_range ?? undefined,
+  experienceLevel: row.experience_level as JobOffer['experienceLevel'],
+  featured: row.featured,
+  isActive: row.is_active,
+  viewsCount: row.views_count,
+  applicationsCount: row.applications_count,
+});
+
+/** Convertit un JobOffer applicatif → payload DB (INSERT/UPDATE) */
+export const jobOfferToDb = (
+  job: Omit<JobOffer, 'id' | 'createdAtISO' | 'publishedAt' | 'viewsCount' | 'applicationsCount'>
+): Omit<DbJobOffer, 'id' | 'created_at' | 'views_count' | 'applications_count'> => ({
+  title: job.title,
+  company: job.company,
+  description: job.description,
+  location: job.city,
+  contact_email: job.contactEmail,
+  contact_phone: job.contactPhone ?? null,
+  logo_url: job.companyLogo ?? null,
+  is_active: job.isActive ?? true,
+  category: job.category,
+  contract_type: job.contractType,
+  experience_level: job.experienceLevel,
+  salary_range: job.salaryRange ?? null,
+  company_initials: job.companyInitials,
+  missions: job.missions,
+  profile_requirements: job.profile,
+  contact_subject: job.contactSubject ?? null,
+  original_link: job.originalLink ?? null,
+  featured: job.featured ?? false,
+});

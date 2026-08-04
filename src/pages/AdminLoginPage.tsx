@@ -1,22 +1,38 @@
 import React, { useState } from 'react';
-import { Lock, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Lock, ArrowRight, ShieldAlert, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 interface AdminLoginPageProps {
   onLogin: () => void;
 }
 
 export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'Aibra@2026';
-    if (password === adminPassword) {
-      onLogin();
-    } else {
-      setError(true);
-      setTimeout(() => setError(false), 3000);
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMsg('Email ou mot de passe incorrect.');
+      } else if (data.session) {
+        onLogin();
+      }
+    } catch (err: unknown) {
+      setErrorMsg('Une erreur est survenue lors de la connexion.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -40,8 +56,26 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
         <div className="bg-white py-8 px-4 shadow-xl border border-slate-200 sm:rounded-3xl sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
+              <label htmlFor="email" className="block text-sm font-bold text-slate-700">
+                Email
+              </label>
+              <div className="mt-2">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`appearance-none block w-full px-4 py-3 border ${errorMsg ? 'border-red-300 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500'} rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-sm`}
+                  placeholder="admin@aibraacademy.com"
+                />
+              </div>
+            </div>
+
+            <div>
               <label htmlFor="password" className="block text-sm font-bold text-slate-700">
-                Mot de passe administrateur
+                Mot de passe
               </label>
               <div className="mt-2">
                 <input
@@ -51,13 +85,13 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`appearance-none block w-full px-4 py-3 border ${error ? 'border-red-300 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500'} rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-sm`}
+                  className={`appearance-none block w-full px-4 py-3 border ${errorMsg ? 'border-red-300 focus:ring-red-500' : 'border-slate-300 focus:ring-emerald-500'} rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-sm`}
                   placeholder="••••••••"
                 />
               </div>
-              {error && (
+              {errorMsg && (
                 <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                  <ShieldAlert className="w-4 h-4" /> Mot de passe incorrect
+                  <ShieldAlert className="w-4 h-4" /> {errorMsg}
                 </p>
               )}
             </div>
@@ -65,10 +99,20 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all active:scale-98 items-center gap-2"
+                disabled={isLoading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all active:scale-98 items-center gap-2"
               >
-                <span>Se connecter</span>
-                <ArrowRight className="w-4 h-4" />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Connexion...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Se connecter</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </form>

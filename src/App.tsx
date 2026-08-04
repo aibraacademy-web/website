@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { JobOffer, JobFilterState } from './types';
 import { 
-  getStoredJobs, 
+  fetchJobs,
+  fetchAllJobs,
   getSavedJobIds, 
   toggleSaveJob, 
   getPlatformStats,
   incrementJobViews
 } from './services/jobService';
+import { supabase } from './lib/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -24,8 +27,12 @@ import { ContactPage } from './pages/ContactPage';
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>('home');
   const [jobs, setJobs] = useState<JobOffer[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  
+  // Auth state
+  const [session, setSession] = useState<Session | null>(null);
+  const isAdminAuthenticated = !!session;
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [routeJobId, setRouteJobId] = useState<string | null>(null);
@@ -33,6 +40,21 @@ export default function App() {
   
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+
+  // Auth Effect
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const resolveRouteFromPath = (pathname: string, authenticated: boolean) => {
     const cleanPath = pathname.toLowerCase().replace(/\/+$|^\/+/g, '');
@@ -89,12 +111,24 @@ export default function App() {
     sortBy: 'latest'
   });
 
+  // Charge les offres publiques depuis Supabase
+  const loadPublicJobs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const loadedJobs = await fetchJobs();
+      setJobs(loadedJobs);
+    } catch (error) {
+      console.error('[App] Erreur chargement offres:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Load initial dataset & bookmarks on mount
   useEffect(() => {
-    const loadedJobs = getStoredJobs();
-    setJobs(loadedJobs);
+    loadPublicJobs();
     setSavedJobIds(getSavedJobIds());
-  }, []);
+  }, [loadPublicJobs]);
 
   // Sync selected job with route ID when jobs are available
   useEffect(() => {
@@ -161,14 +195,25 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // New job added callback
-  const handleJobAdded = (newJob: JobOffer) => {
+  // Job added callback — refresh public jobs list
+  const handleJobAdded = async (newJob: JobOffer) => {
     setJobs(prev => [newJob, ...prev]);
   };
 
   // Job deleted callback
   const handleJobDeleted = (jobId: string) => {
     setJobs(prev => prev.filter(j => j.id !== jobId));
+  };
+
+  // Job updated callback (activer/désactiver, etc.)
+  const handleJobUpdated = (updatedJob: JobOffer) => {
+    setJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
+  };
+
+  // All jobs cleared callback
+  const handleAllJobsCleared = () => {
+    setJobs([]);
+    setSavedJobIds([]);
   };
 
   // Get saved offers array
@@ -238,7 +283,6 @@ export default function App() {
         {currentTab === 'admin-login' && !isAdminAuthenticated && (
           <AdminLoginPage
             onLogin={() => {
-              setIsAdminAuthenticated(true);
               setCurrentTab('admin-dashboard');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -248,9 +292,10 @@ export default function App() {
         {(currentTab === 'admin-dashboard' || (currentTab === 'admin-login' && isAdminAuthenticated)) && (
           isAdminAuthenticated ? (
             <AdminDashboardPage
-              jobs={jobs}
               onJobAdded={handleJobAdded}
               onJobDeleted={handleJobDeleted}
+              onJobUpdated={handleJobUpdated}
+              onAllJobsCleared={handleAllJobsCleared}
             />
           ) : (
             <div className="text-center py-20 text-slate-500">Accès refusé. Veuillez vous connecter via l'espace admin.</div>
