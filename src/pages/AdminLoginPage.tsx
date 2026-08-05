@@ -18,19 +18,26 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
     setErrorMsg('');
 
     try {
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+      console.log('--- DIAGNOSTIC SUPABASE AUTH ---');
+      console.log('Email soumis :', `"${trimmedEmail}"`);
+      console.log('Mot de passe soumis :', `"${trimmedPassword}"`);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
 
       if (error) {
+        console.error('Erreur Supabase Auth détaillée :', error);
         setErrorMsg('Email ou mot de passe incorrect.');
       } else if (data.session) {
         onLogin();
       }
     } catch (err: unknown) {
       setErrorMsg('Une erreur est survenue lors de la connexion.');
-      console.error(err);
+      console.error('Exception capturée :', err);
     } finally {
       setIsLoading(false);
     }
