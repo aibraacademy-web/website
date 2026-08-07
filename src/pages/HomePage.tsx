@@ -15,7 +15,10 @@ import {
   CheckCircle2, 
   Sparkles,
   Building2,
-  Users2
+  Users2,
+  BookOpen,
+  ShoppingCart,
+  Landmark
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -124,6 +127,119 @@ export const HomePage: React.FC<HomePageProps> = ({
             </button>
           </div>
 
+        </div>
+      </section>
+
+      {/* 4bis. Thematic Category Cards */}
+      <section className="py-12 sm:py-16 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Explorer par thématique</span>
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
+              Catégories spécialisées
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Accédez directement aux offres qui correspondent à votre parcours ou secteur cible.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* Card 1: Concours & Grandes Écoles */}
+            <div
+              onClick={() => {
+                onSearch('concours|pfe|stage fin|encg|ensa|est |école|ingénieur|licence|master|bac+', '');
+                onNavigate('jobs');
+              }}
+              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                    Thématique
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors font-serif mb-1">
+                  Concours & Grandes Écoles
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Retrouvez les offres liées aux concours d'entrée et aux grandes écoles marocaines (ENCG, ENSA, EST, écoles d'ingénieurs...)
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-amber-400 group-hover:text-amber-300">
+                <span>Explorer les offres</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Card 2: Grande Distribution & Retail */}
+            <div
+              onClick={() => {
+                onSearch('distribution|retail|marjane|carrefour|aswak|grande surface|hypermarché|supermarché|magasin|commercial', '');
+                onNavigate('jobs');
+              }}
+              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-cyan-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 group-hover:scale-110 transition-transform">
+                    <ShoppingCart className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+                    Thématique
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors font-serif mb-1">
+                  Grande Distribution & Retail
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Offres d'emploi dans les grandes surfaces et enseignes de distribution (Marjane, Carrefour, Aswak Assalam...)
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-cyan-400 group-hover:text-cyan-300">
+                <span>Explorer les offres</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Card 3: Fonction Publique & Concours d'État */}
+            <div
+              onClick={() => {
+                onSearch('public|police|gendarmerie|commune|jamaa|administration|fonction publique|collectivité|ministère|état|territorial', '');
+                onNavigate('jobs');
+              }}
+              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 group-hover:scale-110 transition-transform">
+                    <Landmark className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                    Thématique
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors font-serif mb-1">
+                  Fonction Publique & Concours d'État
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Offres et concours du secteur public : Police, Gendarmerie, Collectivités territoriales (Jamaa/Commune), administrations...
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
+                <span>Explorer les offres</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 

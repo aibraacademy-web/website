@@ -167,14 +167,21 @@ export const incrementJobViews = async (id: string): Promise<void> => {
 export const filterJobs = (jobs: JobOffer[], filters: JobFilterState): JobOffer[] => {
   return jobs.filter(job => {
     // Keyword search: titre, entreprise, ville, description, catégorie
+    // Supporte le multi-keyword OR via le séparateur "|"
     if (filters.keyword.trim()) {
-      const q = filters.keyword.toLowerCase().trim();
-      const matchTitle = job.title.toLowerCase().includes(q);
-      const matchCompany = job.company.toLowerCase().includes(q);
-      const matchCity = job.city.toLowerCase().includes(q);
-      const matchCategory = job.category.toLowerCase().includes(q);
-      const matchDesc = job.description.toLowerCase().includes(q);
-      if (!matchTitle && !matchCompany && !matchCity && !matchCategory && !matchDesc) {
+      const raw = filters.keyword.toLowerCase().trim();
+      const terms = raw.includes('|') ? raw.split('|').map(t => t.trim()).filter(Boolean) : [raw];
+      const haystack = [
+        job.title,
+        job.company,
+        job.city,
+        job.category,
+        job.description,
+        ...(job.missions || []),
+        ...(job.profile || [])
+      ].join(' ').toLowerCase();
+      const matchesAny = terms.some(term => haystack.includes(term));
+      if (!matchesAny) {
         return false;
       }
     }
