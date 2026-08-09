@@ -72,9 +72,17 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* Company Avatar / Logo */}
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white font-bold text-base flex items-center justify-center shrink-0 shadow-sm border border-slate-800 font-serif">
-              {job.companyInitials}
-            </div>
+            {job.companyLogo ? (
+              <img 
+                src={job.companyLogo} 
+                alt={job.company} 
+                className="w-12 h-12 rounded-xl object-contain bg-white shrink-0 shadow-sm border border-slate-200 p-1"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white font-bold text-base flex items-center justify-center shrink-0 shadow-sm border border-slate-800 font-serif">
+                {job.companyInitials}
+              </div>
+            )}
 
             <div className="min-w-0">
               <h4 className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 truncate">
