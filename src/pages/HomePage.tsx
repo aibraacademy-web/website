@@ -1,21 +1,11 @@
 import React from 'react';
-import { JobOffer, JobCategory, StatisticsData } from '../types';
+import { JobOffer, StatisticsData } from '../types';
 import { HeroSection } from '../components/HeroSection';
 import { CounterSection } from '../components/CounterSection';
 import { PopularCategories } from '../components/PopularCategories';
 import { JobCard } from '../components/JobCard';
-import { VisualBanner } from '../components/VisualBanner';
 import { 
   ArrowRight, 
-  Briefcase, 
-  PlusCircle, 
-  ShieldCheck, 
-  GraduationCap, 
-  Send, 
-  CheckCircle2, 
-  Sparkles,
-  Building2,
-  Users2,
   BookOpen,
   ShoppingCart,
   Landmark
@@ -54,7 +44,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   return (
     <div className="min-h-screen bg-slate-50">
       
-      {/* 1. Hero Section */}
+      {/* 1. Hero Section (search prominently displayed) */}
       <HeroSection 
         onSearch={(kw, c) => {
           onSearch(kw, c);
@@ -63,40 +53,26 @@ export const HomePage: React.FC<HomePageProps> = ({
         onExplore={() => onNavigate('jobs')}
       />
 
-      <VisualBanner />
-
       {/* 2. Dynamic Counters */}
       <CounterSection stats={stats} />
 
-      {/* 3. Popular Categories */}
-      <PopularCategories 
-        categoryCounts={categoryCounts}
-        onSelectCategory={(cat) => {
-          onNavigate('jobs', cat);
-        }}
-      />
-
-      {/* 4. Dernières Offres Publiées */}
+      {/* 3. Dernières Offres Publiées */}
       <section className="py-12 sm:py-16 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold mb-2 border border-emerald-200">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Mis à jour en temps réel</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-serif">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
                 Dernières offres d'emploi & stages
               </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                Postulez directement par email sans créer de compte compliqué.
+              <p className="text-sm text-slate-500 mt-1">
+                Postulez directement par email sans créer de compte.
               </p>
             </div>
 
             <button
               onClick={() => onNavigate('jobs')}
-              className="inline-flex items-center gap-2 text-white bg-slate-900 hover:bg-slate-800 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all shadow-sm shrink-0"
+              className="inline-flex items-center gap-2 text-white bg-slate-900 hover:bg-slate-700 font-semibold text-sm px-5 py-2.5 rounded-lg transition-colors shadow-sm shrink-0"
             >
               <span>Voir toutes les offres</span>
               <ArrowRight className="w-4 h-4" />
@@ -104,7 +80,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           {/* Job cards grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {recentJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -117,12 +93,12 @@ export const HomePage: React.FC<HomePageProps> = ({
             ))}
           </div>
 
-          <div className="mt-10 text-center">
+          <div className="mt-8 text-center">
             <button
               onClick={() => onNavigate('jobs')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm px-8 py-3.5 rounded-xl shadow-md hover:from-emerald-500 hover:to-teal-500 transition-all active:scale-98"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-8 py-3 rounded-lg shadow-sm transition-colors"
             >
-              <span>Explorer l'ensemble du catalogue d'emploi</span>
+              <span>Explorer toutes les offres</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -130,24 +106,28 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 4bis. Thematic Category Cards */}
-      <section className="py-12 sm:py-16 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800">
+      {/* 4. Popular Categories */}
+      <PopularCategories 
+        categoryCounts={categoryCounts}
+        onSelectCategory={(cat) => {
+          onNavigate('jobs', cat);
+        }}
+      />
+
+      {/* 5. Catégories spécialisées (couleurs uniformisées : vert émeraude/slate) */}
+      <section className="py-12 sm:py-16 bg-slate-900 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Explorer par thématique</span>
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-serif">
+          <div className="mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">
               Catégories spécialisées
             </h2>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Accédez directement aux offres qui correspondent à votre parcours ou secteur cible.
+            <p className="text-slate-400 text-sm mt-1">
+              Accédez directement aux offres correspondant à votre parcours ou secteur cible.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
             {/* Card 1: Concours & Grandes Écoles */}
             <div
@@ -155,25 +135,22 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onSearch('concours|pfe|stage fin|encg|ensa|est |école|ingénieur|licence|master|bac+', '');
                 onNavigate('jobs');
               }}
-              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+              className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 group-hover:scale-110 transition-transform">
-                    <BookOpen className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                    <BookOpen className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                    Thématique
-                  </span>
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors font-serif mb-1">
+                <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
                   Concours & Grandes Écoles
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Retrouvez les offres liées aux concours d'entrée et aux grandes écoles marocaines (ENCG, ENSA, EST, écoles d'ingénieurs...)
+                  Offres liées aux concours d'entrée et grandes écoles marocaines (ENCG, ENSA, EST, écoles d'ingénieurs...)
                 </p>
               </div>
-              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-amber-400 group-hover:text-amber-300">
+              <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
                 <span>Explorer les offres</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -185,25 +162,22 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onSearch('distribution|retail|marjane|carrefour|aswak|grande surface|hypermarché|supermarché|magasin|commercial', '');
                 onNavigate('jobs');
               }}
-              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-cyan-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+              className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 group-hover:scale-110 transition-transform">
-                    <ShoppingCart className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                    <ShoppingCart className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
-                    Thématique
-                  </span>
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors font-serif mb-1">
+                <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
                   Grande Distribution & Retail
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Offres d'emploi dans les grandes surfaces et enseignes de distribution (Marjane, Carrefour, Aswak Assalam...)
                 </p>
               </div>
-              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-cyan-400 group-hover:text-cyan-300">
+              <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
                 <span>Explorer les offres</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
@@ -215,90 +189,28 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onSearch('public|police|gendarmerie|commune|jamaa|administration|fonction publique|collectivité|ministère|état|territorial', '');
                 onNavigate('jobs');
               }}
-              className="group cursor-pointer bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition-all duration-300 space-y-3 flex flex-col justify-between"
+              className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 group-hover:scale-110 transition-transform">
-                    <Landmark className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                    <Landmark className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
-                    Thématique
-                  </span>
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors font-serif mb-1">
+                <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
                   Fonction Publique & Concours d'État
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Offres et concours du secteur public : Police, Gendarmerie, Collectivités territoriales (Jamaa/Commune), administrations...
                 </p>
               </div>
-              <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
+              <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
                 <span>Explorer les offres</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
 
           </div>
-        </div>
-      </section>
-
-      {/* 5. Pourquoi Aibra Academy ? */}
-      <section className="py-12 sm:py-16 bg-slate-900 text-white border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950 px-3 py-1 rounded-full border border-emerald-800">
-              Expertise RH Nearshore &amp; Recrutement Maroc
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold font-serif text-white">
-              Pourquoi choisir Aibra Academy comme partenaire RH ?
-            </h2>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Cabinet de recrutement engagé à Agadir et à travers le Maroc, nous rapprochons les candidats qualifiés et les entreprises grâce à nos solutions RH nearshore et notre service de talent acquisition.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                <Send className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-serif">
-                Contact Email Direct
-              </h3>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                Pas de formulaires interminables. Vous cliquez sur le bouton email et votre candidature s'envoie directement à la boîte de réception du recruteur.
-              </p>
-            </div>
-
-            <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30">
-                <GraduationCap className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-serif">
-                Spécial Jeunes Diplômés & PFE
-              </h3>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                Une priorité accordée aux stages de fin d'études (PFE) et aux premiers emplois pour accompagner les étudiants des universités et instituts marocains (EST, OFPPT, ENCG, ENSA, FSJES...).
-              </p>
-            </div>
-
-            <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700/80 space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-serif">
-                Offres Authentiques & Vérifiées
-              </h3>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                Chaque offre est modérée pour garantir l'exactitude des coordonnées de contact et lutter contre les fausses annonces.
-              </p>
-            </div>
-
-          </div>
-
         </div>
       </section>
 
