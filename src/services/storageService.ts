@@ -52,9 +52,15 @@ const CVS_BUCKET = 'cvs';
  * Le fichier est placé dans un dossier correspondant à l'ID de l'utilisateur.
  * Retourne le chemin relatif du fichier uploadé.
  */
-export const uploadCV = async (file: File, userId: string): Promise<string> => {
+export const uploadCV = async (file: File, userId?: string): Promise<string> => {
+  let targetFolder = userId;
+  if (!targetFolder) {
+    const { data } = await supabase.auth.getSession();
+    targetFolder = data.session?.user?.id || 'admin_uploads';
+  }
+
   const ext = file.name.split('.').pop() ?? 'pdf';
-  const fileName = `${userId}/cv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+  const fileName = `${targetFolder}/cv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
   const { error } = await supabase.storage
     .from(CVS_BUCKET)
