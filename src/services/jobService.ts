@@ -15,6 +15,7 @@ export const fetchJobs = async (): Promise<JobOffer[]> => {
     .from(TABLE)
     .select('*')
     .eq('is_active', true)
+    .eq('status', 'approved')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -36,6 +37,24 @@ export const fetchAllJobs = async (): Promise<JobOffer[]> => {
 
   if (error) {
     console.error('[jobService] Erreur fetchAllJobs:', error.message);
+    return [];
+  }
+
+  return (data as DbJobOffer[]).map(dbToJobOffer);
+};
+
+/**
+ * Récupère les offres en attente d'approbation (pour l'admin).
+ */
+export const fetchPendingJobs = async (): Promise<JobOffer[]> => {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[jobService] Erreur fetchPendingJobs:', error.message);
     return [];
   }
 
@@ -106,6 +125,9 @@ export const updateJobOffer = async (id: string, fields: Partial<JobOffer>): Pro
   if (fields.featured !== undefined)       dbFields.featured = fields.featured;
   if (fields.viewsCount !== undefined)     dbFields.views_count = fields.viewsCount;
   if (fields.applicationsCount !== undefined) dbFields.applications_count = fields.applicationsCount;
+  if (fields.companyId !== undefined)      dbFields.company_id = fields.companyId ?? null;
+  if (fields.domaine !== undefined)        dbFields.domaine = fields.domaine ?? null;
+  if (fields.status !== undefined)         dbFields.status = fields.status;
 
   const { error } = await supabase.from(TABLE).update(dbFields).eq('id', id);
 
@@ -122,6 +144,17 @@ export const deleteJobOffer = async (id: string): Promise<void> => {
   const { error } = await supabase.from(TABLE).delete().eq('id', id);
   if (error) {
     console.error('[jobService] Erreur deleteJobOffer:', error.message);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Approuve, rejette ou met en attente une offre (admin).
+ */
+export const updateJobStatus = async (id: string, status: 'approved' | 'rejected' | 'pending'): Promise<void> => {
+  const { error } = await supabase.from(TABLE).update({ status }).eq('id', id);
+  if (error) {
+    console.error('[jobService] Erreur updateJobStatus:', error.message);
     throw new Error(error.message);
   }
 };

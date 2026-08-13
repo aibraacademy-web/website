@@ -25,6 +25,32 @@ export type MoroccanCity =
   | 'Nador'
   | 'Autre ville';
 
+export type UserRole = 'candidat' | 'entreprise' | 'admin';
+export type JobStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Profile {
+  id: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface Candidate extends Profile {
+  fullName: string;
+  phone?: string;
+  domaineSouhaite?: string;
+  niveauEtude?: string;
+  ville?: string;
+  skills?: string;
+  cvUrl?: string;
+}
+
+export interface Company extends Profile {
+  companyName: string;
+  description?: string;
+  logoUrl?: string;
+  phone?: string;
+}
+
 export interface JobOffer {
   id: string;
   title: string;
@@ -49,6 +75,9 @@ export interface JobOffer {
   isActive?: boolean;
   viewsCount?: number;
   applicationsCount?: number;
+  companyId?: string;
+  domaine?: string;
+  status: JobStatus;
 }
 
 export interface JobFilterState {
@@ -68,6 +97,33 @@ export interface StatisticsData {
 }
 
 // ─── Supabase DB Row Type (snake_case) ────────────────────────────────────────
+
+export interface DbProfile {
+  id: string;
+  role: string;
+  created_at: string;
+}
+
+export interface DbCandidate {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  domaine_souhaite: string | null;
+  niveau_etude: string | null;
+  ville: string | null;
+  skills: string | null;
+  cv_url: string | null;
+  created_at: string;
+}
+
+export interface DbCompany {
+  id: string;
+  company_name: string;
+  description: string | null;
+  logo_url: string | null;
+  phone: string | null;
+  created_at: string;
+}
 
 export interface DbJobOffer {
   id: string;
@@ -92,6 +148,9 @@ export interface DbJobOffer {
   featured: boolean;
   views_count: number;
   applications_count: number;
+  company_id: string | null;
+  domaine: string | null;
+  status: string;
 }
 
 // ─── Conversion helpers ────────────────────────────────────────────────────────
@@ -137,6 +196,9 @@ export const dbToJobOffer = (row: DbJobOffer): JobOffer => ({
   isActive: row.is_active,
   viewsCount: row.views_count,
   applicationsCount: row.applications_count,
+  companyId: row.company_id ?? undefined,
+  domaine: row.domaine ?? undefined,
+  status: (row.status as JobStatus) || 'approved',
 });
 
 /** Convertit un JobOffer applicatif → payload DB (INSERT/UPDATE) */
@@ -161,4 +223,7 @@ export const jobOfferToDb = (
   contact_subject: job.contactSubject ?? null,
   original_link: job.originalLink ?? null,
   featured: job.featured ?? false,
+  company_id: job.companyId ?? null,
+  domaine: job.domaine ?? null,
+  status: job.status,
 });

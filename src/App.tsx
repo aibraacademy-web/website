@@ -23,6 +23,12 @@ import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { CandidateDashboardPage } from './pages/CandidateDashboardPage';
+import { EntrepriseDashboardPage } from './pages/EntrepriseDashboardPage';
+import { AuthGuard } from './components/AuthGuard';
+import { useAuth } from './contexts/AuthContext';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>('home');
@@ -30,9 +36,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   
-  // Auth state
-  const [session, setSession] = useState<Session | null>(null);
-  const isAdminAuthenticated = !!session;
+  // Auth from context
+  const { session, profile, isLoading: isAuthLoading } = useAuth();
+  const isAdminAuthenticated = !!session && profile?.role === 'admin';
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [routeJobId, setRouteJobId] = useState<string | null>(null);
@@ -41,26 +47,16 @@ export default function App() {
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
 
-  // Auth Effect
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const resolveRouteFromPath = (pathname: string, authenticated: boolean) => {
     const cleanPath = pathname.toLowerCase().replace(/\/+$|^\/+/g, '');
     if (cleanPath === 'admin') {
       return { tab: authenticated ? 'admin-dashboard' : 'admin-login' };
     }
+    if (cleanPath === 'login') return { tab: 'login' };
+    if (cleanPath === 'register') return { tab: 'register' };
+    if (cleanPath === 'espace-candidat') return { tab: 'candidat-dashboard' };
+    if (cleanPath === 'espace-entreprise') return { tab: 'entreprise-dashboard' };
+
     if (cleanPath.startsWith('offres/')) {
       const [, id] = cleanPath.split('/');
       return { tab: 'job-detail', jobId: id };
@@ -98,6 +94,10 @@ export default function App() {
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
+    if (tab === 'login') return '/login';
+    if (tab === 'register') return '/register';
+    if (tab === 'candidat-dashboard') return '/espace-candidat';
+    if (tab === 'entreprise-dashboard') return '/espace-entreprise';
     return '/';
   };
 
@@ -300,6 +300,30 @@ export default function App() {
           ) : (
             <div className="text-center py-20 text-slate-500">Accès refusé. Veuillez vous connecter via l'espace admin.</div>
           )
+        )}
+
+        {currentTab === 'login' && (
+          <LoginPage onNavigate={handleNavigate} />
+        )}
+
+        {currentTab === 'register' && (
+          <RegisterPage onNavigate={handleNavigate} />
+        )}
+
+        {currentTab === 'candidat-dashboard' && (
+          <AuthGuard allowedRoles={['candidat']} onRedirect={handleNavigate}>
+            <CandidateDashboardPage
+              onNavigate={handleNavigate}
+              savedJobIds={savedJobIds}
+              onToggleSaveJob={handleToggleSave}
+            />
+          </AuthGuard>
+        )}
+
+        {currentTab === 'entreprise-dashboard' && (
+          <AuthGuard allowedRoles={['entreprise']} onRedirect={handleNavigate}>
+            <EntrepriseDashboardPage onNavigate={handleNavigate} />
+          </AuthGuard>
         )}
 
         {currentTab === 'about' && (

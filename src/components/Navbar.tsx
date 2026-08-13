@@ -10,8 +10,13 @@ import {
   Sparkles,
   PhoneCall,
   Info,
-  Search
+  Search,
+  User,
+  LogOut,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NavbarProps {
   currentTab: string;
@@ -27,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSavedModal
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { profile, signOut } = useAuth();
 
   const navItems: { id: string; label: string; icon?: React.FC<{ className?: string }>; badge?: string }[] = [
     { id: 'home', label: 'Accueil' },
@@ -39,6 +45,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     onNavigate(id);
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    handleNavClick('home');
   };
 
   return (
@@ -118,7 +129,42 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Post Job CTA button (Desktop) removed */}
+            {/* Auth Controls */}
+            {profile ? (
+              <div className="hidden md:flex items-center gap-2">
+                <button
+                  onClick={() => handleNavClick(profile.role === 'admin' ? 'admin-dashboard' : profile.role === 'entreprise' ? 'entreprise-dashboard' : 'candidat-dashboard')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-all shadow-sm"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Mon Espace</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition-colors"
+                  title="Se déconnecter"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-2">
+                <button
+                  onClick={() => handleNavClick('login')}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Connexion</span>
+                </button>
+                <button
+                  onClick={() => handleNavClick('register')}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-all shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Inscription</span>
+                </button>
+              </div>
+            )}
 
             {/* Mobile Hamburger Toggle */}
             <button
@@ -160,8 +206,42 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
 
-          <div className="pt-2 border-t border-slate-800">
-            {/* Mobile Post Job button removed */}
+          <div className="pt-2 border-t border-slate-800 space-y-2 mt-2">
+            {profile ? (
+              <>
+                <button
+                  onClick={() => handleNavClick(profile.role === 'admin' ? 'admin-dashboard' : profile.role === 'entreprise' ? 'entreprise-dashboard' : 'candidat-dashboard')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm"
+                >
+                  <User className="w-4 h-4" />
+                  Mon Espace
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 font-semibold shadow-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Se déconnecter
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleNavClick('login')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-white font-semibold border border-slate-700"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Connexion
+                </button>
+                <button
+                  onClick={() => handleNavClick('register')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Inscription gratuite
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

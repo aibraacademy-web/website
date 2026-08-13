@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { JobOffer, JobCategory, MoroccanCity, ContractType } from '../types';
-import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive } from '../services/jobService';
+import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { supabase } from '../lib/supabaseClient';
+import { StatusBadge } from '../components/StatusBadge';
 import { 
   PlusCircle, 
   Building2, 
@@ -36,7 +37,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onJobUpdated,
   onAllJobsCleared
 }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'add'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation'>('manage');
   const [jobs, setJobs] = useState<JobOffer[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -309,6 +310,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
+  const handleUpdateStatus = async (job: JobOffer, status: 'approved' | 'rejected') => {
+    try {
+      await updateJobStatus(job.id, status);
+      const updated = { ...job, status };
+      setJobs(prev => prev.map(j => j.id === job.id ? updated : j));
+      onJobUpdated(updated);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Erreur de statut : ${msg}`);
+    }
+  };
+
+
   const handleClearAll = async () => {
     if (jobs.length === 0) {
       alert('La liste des offres est déjà vide.');
@@ -376,7 +390,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'manage' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <List className="w-4 h-4" />
-                Gérer ({jobs.length})
+                Gérer
+              </button>
+              <button
+                onClick={() => setActiveTab('moderation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'moderation' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Modération ({jobs.filter(j => j.status === 'pending').length})
               </button>
               <button
                 onClick={() => setActiveTab('add')}
@@ -435,6 +456,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <p className="text-xs text-slate-500">{job.contractType} · {job.category}</p>
                         </td>
                         <td className="p-4 text-center">
+                          <StatusBadge status={job.status || 'approved'} />
+                        </td>
+                        <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${job.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                             {job.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                             {job.isActive ? 'Active' : 'Inactive'}
@@ -478,6 +502,71 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-slate-500">
                           Aucune offre trouvée. Commencez par en ajouter une.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Moderation */}
+        {activeTab === 'moderation' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 bg-slate-50">
+              <h2 className="text-xl font-bold text-slate-900">Modération des offres</h2>
+              <p className="text-sm text-slate-500 mt-1">Acceptez ou rejetez les offres publiées par les entreprises.</p>
+            </div>
+            {isLoadingJobs ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-slate-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Chargement des offres...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+                      <th className="p-4 font-semibold">Poste & Entreprise</th>
+                      <th className="p-4 font-semibold">Détails</th>
+                      <th className="p-4 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm divide-y divide-slate-100">
+                    {jobs.filter(j => j.status === 'pending').map((job) => (
+                      <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4">
+                          <p className="font-bold text-slate-900">{job.title}</p>
+                          <p className="text-xs text-slate-500">{job.company}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="font-semibold text-slate-700">{job.city} · {job.contractType}</p>
+                          <p className="text-xs text-slate-500 line-clamp-1">{job.description}</p>
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleUpdateStatus(job, 'approved')}
+                              className="px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              Approuver
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(job, 'rejected')}
+                              className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              Rejeter
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {jobs.filter(j => j.status === 'pending').length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="p-8 text-center text-slate-500">
+                          Aucune offre en attente de modération.
                         </td>
                       </tr>
                     )}

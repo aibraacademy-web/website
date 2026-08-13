@@ -44,3 +44,45 @@ export const deleteLogo = async (logoUrl: string): Promise<void> => {
     console.warn('[storageService] Impossible de supprimer le logo:', logoUrl);
   }
 };
+
+const CVS_BUCKET = 'cvs';
+
+/**
+ * Upload un CV (PDF) vers Supabase Storage (bucket privé 'cvs').
+ * Le fichier est placé dans un dossier correspondant à l'ID de l'utilisateur.
+ * Retourne le chemin relatif du fichier uploadé.
+ */
+export const uploadCV = async (file: File, userId: string): Promise<string> => {
+  const ext = file.name.split('.').pop() ?? 'pdf';
+  const fileName = `${userId}/cv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(CVS_BUCKET)
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type,
+    });
+
+  if (error) {
+    throw new Error(`Erreur upload CV : ${error.message}`);
+  }
+
+  return fileName;
+};
+
+/**
+ * Génère une URL signée (valable 1 heure) pour accéder à un CV privé.
+ */
+export const getCVSignedUrl = async (filePath: string): Promise<string | null> => {
+  const { data, error } = await supabase.storage
+    .from(CVS_BUCKET)
+    .createSignedUrl(filePath, 3600); // 1 hour
+
+  if (error || !data) {
+    console.error('[storageService] Erreur génération URL signée pour le CV:', error?.message);
+    return null;
+  }
+
+  return data.signedUrl;
+};

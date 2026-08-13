@@ -2,11 +2,11 @@ import React from 'react';
 import { JobCategory } from '../types';
 import { 
   Users, 
-  Calculator, 
-  Wrench, 
-  FolderKanban, 
-  Laptop, 
-  Sprout, 
+  TrendingUp, 
+  Factory, 
+  ClipboardList, 
+  Monitor, 
+  Wheat, 
   ArrowRight
 } from 'lucide-react';
 
@@ -35,31 +35,31 @@ export const PopularCategories: React.FC<PopularCategoriesProps> = ({
       id: 'Comptabilité',
       title: 'Comptabilité & Finance',
       description: 'Comptabilité générale, trésorerie, audit et fiscalité marocaine',
-      icon: Calculator,
+      icon: TrendingUp,
     },
     {
       id: 'Mécanique',
       title: 'Mécanique & Industrie',
       description: 'Automobile, maintenance industrielle, électromécanique',
-      icon: Wrench,
+      icon: Factory,
     },
     {
       id: 'Administration',
       title: 'Administration & Secrétariat',
       description: 'Gestion administrative, accueil, secrétariat de direction',
-      icon: FolderKanban,
+      icon: ClipboardList,
     },
     {
       id: 'Informatique',
       title: 'Informatique & Digital',
       description: 'Développement web, systèmes & réseaux, data, support IT',
-      icon: Laptop,
+      icon: Monitor,
     },
     {
       id: 'Agriculture',
       title: 'Agriculture & Agroalimentaire',
       description: 'Agronomie, horticulture, contrôle qualité et exportation',
-      icon: Sprout,
+      icon: Wheat,
     }
   ];
 
