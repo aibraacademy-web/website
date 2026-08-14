@@ -6,6 +6,64 @@ import { upsertCandidateProfile } from '../services/candidateService';
 import { upsertCompanyProfile } from '../services/companyService';
 import { useAuth } from '../contexts/AuthContext';
 
+const getErrorMessage = (err: any): string => {
+  if (!err) return "Une erreur inconnue est survenue lors de l'inscription.";
+  
+  // Log the actual error object structure for developer inspection
+  console.error('[RegisterPage DEBUG] Error object details:', {
+    type: typeof err,
+    constructorName: err.constructor?.name,
+    keys: Object.keys(err),
+    message: err.message,
+    status: err.status,
+    error: err.error,
+    error_description: err.error_description,
+    stringified: (() => {
+      try {
+        return JSON.stringify(err);
+      } catch {
+        return 'failed_to_stringify';
+      }
+    })()
+  });
+
+  if (typeof err === 'string') return err;
+  
+  if (err.message && typeof err.message === 'string') {
+    // If message is literally "{}" (a string), return fallback
+    if (err.message.trim() === '{}') {
+      return "Une erreur serveur est survenue (détails de l'erreur vides).";
+    }
+    return err.message;
+  }
+  
+  if (err.error_description && typeof err.error_description === 'string') {
+    return err.error_description;
+  }
+  
+  if (err.error && typeof err.error === 'string') {
+    return err.error;
+  }
+
+  // Handle standard JavaScript Error object if it gets stringified as {}
+  try {
+    const stringified = JSON.stringify(err);
+    if (stringified && stringified !== '{}') {
+      return stringified;
+    }
+  } catch (e) {
+    // Ignore stringify error
+  }
+  
+  // Return toString fallback if not generic [object Object]
+  const str = String(err);
+  if (str && str !== '[object Object]') {
+    return str;
+  }
+  
+  return "Une erreur inconnue est survenue lors de l'inscription.";
+};
+
 interface RegisterPageProps {
   onNavigate: (tab: string) => void;
 }
@@ -62,7 +120,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         }
       });
 
-      if (authError) throw new Error(authError.message);
+      if (authError) throw authError; // throw authError directly instead of wrapping in Error
       if (!authData.user) throw new Error('Erreur lors de la création du compte');
 
       const userId = authData.user.id;
@@ -94,7 +152,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         setStep('verify');
       }
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'inscription');
+      console.error('[RegisterPage] Inscription catch block:', err);
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +206,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       // Redirection vers le dashboard correspondant
       onNavigate(role === 'candidat' ? 'candidat-dashboard' : 'entreprise-dashboard');
     } catch (err: any) {
-      setOtpError(err.message || 'Code de confirmation incorrect ou expiré.');
+      console.error('[RegisterPage] OTP verification catch block:', err);
+      setOtpError(getErrorMessage(err));
     } finally {
       setIsVerifying(false);
     }
@@ -163,7 +223,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       if (resendError) throw resendError;
       setResendStatus('success');
     } catch (err: any) {
-      console.error('[RegisterPage] Error resending code:', err);
+      console.error('[RegisterPage] Resending OTP catch block:', err);
       setResendStatus('error');
     }
   };
