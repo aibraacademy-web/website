@@ -49,12 +49,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
     setError(null);
 
     try {
-      // 1. Sign up with Supabase Auth
+      // 1. Inscription dans Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { role }, // The trigger will create profiles table entry
+          data: { role }, // Le trigger PostgreSQL créera la ligne dans profiles
         }
       });
 
@@ -63,11 +63,30 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
       const userId = authData.user.id;
 
-      // 2. Upload files & create profiles based on role
+      // 2. Établir la session authentifiée active pour que auth.uid() soit valide pour RLS
+      let currentSession = authData.session;
+      if (!currentSession) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          console.warn('[RegisterPage] Remarque connexion post-inscription:', signInError.message);
+        } else {
+          currentSession = signInData.session;
+        }
+      }
+
+      // 3. Upload des fichiers avec la session authentifiée
       if (role === 'candidat') {
         let cvUrl: string | undefined;
         if (cvFile) {
-          cvUrl = await uploadCV(cvFile, userId);
+          try {
+            cvUrl = await uploadCV(cvFile, userId);
+          } catch (storageErr: any) {
+            console.error('[RegisterPage] Erreur upload CV:', storageErr);
+            throw new Error(`Le compte a été créé mais l'upload du CV a échoué : ${storageErr.message}`);
+          }
         }
         await upsertCandidateProfile(userId, {
           fullName,
@@ -81,7 +100,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       } else if (role === 'entreprise') {
         let logoUrl: string | undefined;
         if (logoFile) {
-          logoUrl = await uploadLogo(logoFile);
+          try {
+            logoUrl = await uploadLogo(logoFile);
+          } catch (storageErr: any) {
+            console.error('[RegisterPage] Erreur upload logo:', storageErr);
+          }
         }
         await upsertCompanyProfile(userId, {
           companyName,

@@ -280,17 +280,12 @@ export default function App() {
           )
         )}
 
-        {currentTab === 'admin-login' && !isAdminAuthenticated && (
-          <AdminLoginPage
-            onLogin={() => {
-              setCurrentTab('admin-dashboard');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
-
-        {(currentTab === 'admin-dashboard' || (currentTab === 'admin-login' && isAdminAuthenticated)) && (
-          isAdminAuthenticated ? (
+        {(currentTab === 'admin-login' || currentTab === 'admin-dashboard') && (
+          isAuthLoading ? (
+            <div className="min-h-[60vh] flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : isAdminAuthenticated ? (
             <AdminDashboardPage
               onJobAdded={handleJobAdded}
               onJobDeleted={handleJobDeleted}
@@ -298,7 +293,12 @@ export default function App() {
               onAllJobsCleared={handleAllJobsCleared}
             />
           ) : (
-            <div className="text-center py-20 text-slate-500">Accès refusé. Veuillez vous connecter via l'espace admin.</div>
+            <AdminLoginPage
+              onLogin={() => {
+                setCurrentTab('admin-dashboard');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           )
         )}
 
