@@ -1,44 +1,48 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { UserRole } from '../types';
-import { Mail, Lock, User, Briefcase, Loader2, Building2, Upload, Phone, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Briefcase, Loader2, Building2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { upsertCandidateProfile } from '../services/candidateService';
 import { upsertCompanyProfile } from '../services/companyService';
-import { uploadCV, uploadLogo } from '../services/storageService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RegisterPageProps {
   onNavigate: (tab: string) => void;
 }
 
 export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
-  const [step, setStep] = useState<1 | 2>(1);
+  const { refreshProfile } = useAuth();
+  const [step, setStep] = useState<'role' | 'form' | 'verify'>('role');
   const [role, setRole] = useState<UserRole | null>(null);
 
-  // Common
+  // Common Auth
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // Candidate
+  // Candidate info
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [domaine, setDomaine] = useState('RH');
   const [niveauEtude, setNiveauEtude] = useState('Bac+3');
   const [ville, setVille] = useState('Casablanca');
-  const [skills, setSkills] = useState('');
-  const [cvFile, setCvFile] = useState<File | null>(null);
 
-  // Company
+  // Company info
   const [companyName, setCompanyName] = useState('');
-  const [description, setDescription] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
 
+  // OTP Verification
+  const [otpCode, setOtpCode] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<null | 'sending' | 'success' | 'error'>(null);
+
+  // Status
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const handleRoleSelect = (selectedRole: UserRole) => {
     setRole(selectedRole);
-    setStep(2);
+    setStep('form');
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -63,40 +67,69 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
       const userId = authData.user.id;
 
-      // 2. Établir la session authentifiée active pour que auth.uid() soit valide pour RLS
-      let currentSession = authData.session;
-      if (!currentSession) {
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) {
-          console.warn('[RegisterPage] Remarque connexion post-inscription:', signInError.message);
-        } else {
-          currentSession = signInData.session;
+      // 2. Si l'email confirmation est désactivée et la session est active directement
+      if (authData.session) {
+        if (role === 'candidat') {
+          await upsertCandidateProfile(userId, {
+            fullName,
+            phone,
+            domaineSouhaite: domaine,
+            niveauEtude,
+            ville,
+          });
+        } else if (role === 'entreprise') {
+          await upsertCompanyProfile(userId, {
+            companyName,
+            phone,
+            secteur: domaine,
+            ville,
+            contactPerson: fullName,
+          });
         }
+        await refreshProfile();
+        onNavigate(role === 'candidat' ? 'candidat-dashboard' : 'entreprise-dashboard');
+      } else {
+        // Confirmation requise -> Afficher l'écran OTP
+        setVerificationEmail(email);
+        setStep('verify');
       }
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'inscription');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      // 3. Upload des fichiers avec la session authentifiée
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.length < 6) {
+      setOtpError('Veuillez entrer le code de confirmation à 6 chiffres.');
+      return;
+    }
+
+    setIsVerifying(true);
+    setOtpError(null);
+
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: verificationEmail,
+        token: otpCode,
+        type: 'signup'
+      });
+
+      if (verifyError) throw verifyError;
+      if (!data.user) throw new Error('Erreur de session après vérification.');
+
+      const userId = data.user.id;
+
+      // 3. Créer ou mettre à jour le profil dans la base de données publique
       if (role === 'candidat') {
-        let cvUrl: string | undefined;
-        if (cvFile) {
-          try {
-            cvUrl = await uploadCV(cvFile, userId);
-          } catch (storageErr: any) {
-            // L'upload du CV est optionnel : on log l'erreur mais on ne bloque pas la création du compte
-            console.warn('[RegisterPage] Upload CV échoué (non bloquant) :', storageErr?.message);
-            cvUrl = undefined;
-          }
-        }
         await upsertCandidateProfile(userId, {
           fullName,
           phone,
           domaineSouhaite: domaine,
           niveauEtude,
           ville,
-          skills,
-          cvUrl
         });
       } else if (role === 'entreprise') {
         await upsertCompanyProfile(userId, {
@@ -108,44 +141,42 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         });
       }
 
-      setSuccess(true);
-      
+      // Rafraîchir le contexte de l'application
+      await refreshProfile();
+
+      // Redirection vers le dashboard correspondant
+      onNavigate(role === 'candidat' ? 'candidat-dashboard' : 'entreprise-dashboard');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'inscription');
+      setOtpError(err.message || 'Code de confirmation incorrect ou expiré.');
     } finally {
-      setIsLoading(false);
+      setIsVerifying(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-slate-50">
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
-          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-        </div>
-        <h2 className="text-3xl font-bold font-serif text-slate-900 mb-2">Inscription réussie !</h2>
-        <p className="text-slate-600 mb-8 text-center max-w-md">
-          Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter à votre espace.
-        </p>
-        <button
-          onClick={() => onNavigate('login')}
-          className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
-        >
-          Se connecter
-        </button>
-      </div>
-    );
-  }
+  const handleResendCode = async () => {
+    setResendStatus('sending');
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: verificationEmail
+      });
+      if (resendError) throw resendError;
+      setResendStatus('success');
+    } catch (err: any) {
+      console.error('[RegisterPage] Error resending code:', err);
+      setResendStatus('error');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-extrabold font-serif text-slate-900">
-            {step === 1 ? 'Rejoignez Aibra Academy' : 'Création de votre compte'}
+            {step === 'role' ? 'Rejoignez Aibra Academy' : 'Création de votre compte'}
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            {step === 1 ? 'Choisissez le type de compte qui vous correspond.' : (
+            {step === 'role' ? 'Choisissez le type de compte qui vous correspond.' : (
               <span>
                 Vous avez déjà un compte ?{' '}
                 <button onClick={() => onNavigate('login')} className="font-medium text-emerald-600 hover:text-emerald-500">
@@ -156,7 +187,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           </p>
         </div>
 
-        {step === 1 && (
+        {step === 'role' && (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {/* Candidat Card */}
             <button
@@ -188,10 +219,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 'form' && (
           <div className="bg-white py-8 px-6 shadow-sm rounded-2xl border border-slate-200 sm:px-10">
             <div className="flex items-center gap-3 mb-8">
-              <button onClick={() => setStep(1)} className="text-sm text-slate-500 hover:text-slate-700">← Retour</button>
+              <button onClick={() => setStep('role')} className="text-sm text-slate-500 hover:text-slate-700">← Retour</button>
               <span className="text-sm text-slate-300">|</span>
               <span className="text-sm font-medium text-emerald-700">
                 Profil {role === 'candidat' ? 'Candidat' : 'Entreprise'}
@@ -274,24 +305,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                         <option value="Autre">Autre</option>
                       </select>
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700">Compétences (séparées par des virgules)</label>
-                      <input type="text" value={skills} onChange={e => setSkills(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: React, Node.js, Anglais" />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Upload de CV (PDF){' '}
-                        <span className="text-slate-400 font-normal">(optionnel)</span>
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input type="file" id="cv-upload" accept="application/pdf" className="hidden" onChange={(e) => setCvFile(e.target.files?.[0] || null)} />
-                        <label htmlFor="cv-upload" className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
-                          <Upload className="w-4 h-4 text-emerald-600" />
-                          {cvFile ? 'Changer le fichier' : 'Sélectionner un fichier PDF'}
-                        </label>
-                        {cvFile && <span className="text-sm text-slate-500 truncate max-w-[200px]">{cvFile.name}</span>}
-                      </div>
-                    </div>
                   </>
                 )}
 
@@ -344,6 +357,83 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                     "Créer mon compte"
                   )}
                 </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {step === 'verify' && (
+          <div className="bg-white py-8 px-6 shadow-sm rounded-2xl border border-slate-200 sm:px-10">
+            <div className="flex items-center gap-3 mb-6">
+              <button 
+                onClick={() => setStep('form')} 
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                ← Modifier mes informations
+              </button>
+            </div>
+
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Vérifiez votre adresse email</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Un code de confirmation a été envoyé à l'adresse <strong className="text-slate-800">{verificationEmail}</strong>. Veuillez le saisir ci-dessous pour activer votre compte.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtp} className="space-y-6">
+              {otpError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
+                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 text-center mb-2">
+                  Code de confirmation (6 chiffres)
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  placeholder="000000"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  className="block w-full max-w-[200px] mx-auto text-center py-3 text-2xl font-bold tracking-[8px] border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isVerifying}
+                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all"
+              >
+                {isVerifying ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  "Confirmer mon compte"
+                )}
+              </button>
+
+              <div className="text-center pt-4 border-t border-slate-200">
+                <span className="text-sm text-slate-500">Vous n'avez pas reçu le code ? </span>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendStatus === 'sending'}
+                  className="text-sm font-medium text-emerald-600 hover:text-emerald-500 hover:underline transition-colors"
+                >
+                  {resendStatus === 'sending' ? 'Envoi...' : 'Renvoyer le code'}
+                </button>
+                {resendStatus === 'success' && (
+                  <p className="mt-2 text-xs text-emerald-600 font-medium">Un nouveau code a été envoyé !</p>
+                )}
+                {resendStatus === 'error' && (
+                  <p className="mt-2 text-xs text-red-600 font-medium">Erreur lors de l'envoi du code. Veuillez réessayer.</p>
+                )}
               </div>
             </form>
           </div>
