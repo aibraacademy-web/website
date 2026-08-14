@@ -11,21 +11,56 @@ export const getCurrentProfile = async (): Promise<Profile | null> => {
     return null;
   }
 
+  const userId = session.user.id;
+  const userEmail = session.user.email?.toLowerCase();
+  const userMetaRole = session.user.user_metadata?.role;
+
+  // Utilise maybeSingle() au lieu de single() pour éviter l'erreur HTTP 406 (PGRST116) quand 0 ligne est retournée
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', session.user.id)
-    .single();
+    .eq('id', userId)
+    .maybeSingle();
 
-  if (profileError || !profileData) {
-    console.error('[authService] Error fetching profile:', profileError?.message);
-    return null;
+  if (profileError) {
+    console.error('[authService] Erreur récupération profil:', profileError.message);
+  }
+
+  if (profileData) {
+    return {
+      id: profileData.id,
+      role: profileData.role as UserRole,
+      createdAt: profileData.created_at,
+    };
+  }
+
+  // Auto-réparation si la ligne dans public.profiles n'existe pas encore dans la base
+  const fallbackRole: UserRole = (userEmail === 'aibraacademy@gmail.com' || userMetaRole === 'admin') 
+    ? 'admin' 
+    : (userMetaRole as UserRole) || 'candidat';
+
+  try {
+    const { data: newProfile } = await supabase
+      .from('profiles')
+      .upsert({ id: userId, role: fallbackRole }, { onConflict: 'id' })
+      .select()
+      .maybeSingle();
+
+    if (newProfile) {
+      return {
+        id: newProfile.id,
+        role: newProfile.role as UserRole,
+        createdAt: newProfile.created_at,
+      };
+    }
+  } catch (err) {
+    console.error('[authService] Échec création auto-réparation profil:', err);
   }
 
   return {
-    id: profileData.id,
-    role: profileData.role as UserRole,
-    createdAt: profileData.created_at,
+    id: userId,
+    role: fallbackRole,
+    createdAt: new Date().toISOString(),
   };
 };
 
