@@ -84,8 +84,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           try {
             cvUrl = await uploadCV(cvFile, userId);
           } catch (storageErr: any) {
-            console.error('[RegisterPage] Erreur upload CV:', storageErr);
-            throw new Error(`Le compte a été créé mais l'upload du CV a échoué : ${storageErr.message}`);
+            // L'upload du CV est optionnel : on log l'erreur mais on ne bloque pas la création du compte
+            console.warn('[RegisterPage] Upload CV échoué (non bloquant) :', storageErr?.message);
+            cvUrl = undefined;
           }
         }
         await upsertCandidateProfile(userId, {
@@ -278,7 +279,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                       <input type="text" value={skills} onChange={e => setSkills(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: React, Node.js, Anglais" />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Upload de CV (PDF)</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Upload de CV (PDF){' '}
+                        <span className="text-slate-400 font-normal">(optionnel)</span>
+                      </label>
                       <div className="flex items-center gap-3">
                         <input type="file" id="cv-upload" accept="application/pdf" className="hidden" onChange={(e) => setCvFile(e.target.files?.[0] || null)} />
                         <label htmlFor="cv-upload" className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
