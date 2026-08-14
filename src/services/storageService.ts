@@ -54,13 +54,24 @@ const CVS_BUCKET = 'cvs';
  */
 export const uploadCV = async (file: File, userId?: string): Promise<string> => {
   let targetFolder = userId;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentAuthUid = sessionData.session?.user?.id || null;
+
   if (!targetFolder) {
-    const { data } = await supabase.auth.getSession();
-    targetFolder = data.session?.user?.id || 'admin_uploads';
+    targetFolder = currentAuthUid || 'admin_uploads';
   }
 
   const ext = file.name.split('.').pop() ?? 'pdf';
   const fileName = `${targetFolder}/cv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+  console.log('[DEBUG UPLOAD CV]', {
+    currentAuthUid,
+    targetFolder,
+    fileName,
+    bucketId: CVS_BUCKET,
+    fileType: file.type,
+    fileSize: file.size
+  });
 
   const { error } = await supabase.storage
     .from(CVS_BUCKET)
@@ -71,6 +82,7 @@ export const uploadCV = async (file: File, userId?: string): Promise<string> => 
     });
 
   if (error) {
+    console.error('[DEBUG UPLOAD CV ERROR]', error);
     throw new Error(`Erreur upload CV : ${error.message}`);
   }
 

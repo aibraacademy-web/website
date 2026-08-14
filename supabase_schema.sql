@@ -289,10 +289,13 @@ CREATE POLICY "Authenticated Delete Logos" ON storage.objects FOR DELETE USING (
 
 -- RLS Storage: CVS (Bucket Privé)
 DROP POLICY IF EXISTS "Users can upload their own CV" ON storage.objects;
-CREATE POLICY "Users can upload their own CV" ON storage.objects FOR INSERT WITH CHECK (
+DROP POLICY IF EXISTS "Allow CV Upload" ON storage.objects;
+
+CREATE POLICY "Allow CV Upload" ON storage.objects FOR INSERT WITH CHECK (
   bucket_id = 'cvs' AND (
     (storage.foldername(name))[1] = auth.uid()::text OR
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') OR
+    EXISTS (SELECT 1 FROM auth.users WHERE id::text = (storage.foldername(name))[1])
   )
 );
 
