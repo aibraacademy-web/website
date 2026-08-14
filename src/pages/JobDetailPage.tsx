@@ -18,7 +18,8 @@ import {
   Coins, 
   FileText,
   CheckCircle2,
-  Link2
+  Link2,
+  BadgeCheck
 } from 'lucide-react';
 
 interface JobDetailPageProps {
@@ -102,9 +103,15 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                     {job.title}
                   </h1>
 
-                  <p className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-300 flex flex-wrap items-center gap-2">
                     <Building2 className="w-4 h-4 text-emerald-400" />
                     <span>{job.company}</span>
+                    {job.companyIsVerified && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                        <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        Entreprise vérifiée
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

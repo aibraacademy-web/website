@@ -98,19 +98,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           cvUrl
         });
       } else if (role === 'entreprise') {
-        let logoUrl: string | undefined;
-        if (logoFile) {
-          try {
-            logoUrl = await uploadLogo(logoFile);
-          } catch (storageErr: any) {
-            console.error('[RegisterPage] Erreur upload logo:', storageErr);
-          }
-        }
         await upsertCompanyProfile(userId, {
           companyName,
-          description,
-          logoUrl,
-          phone
+          phone,
+          secteur: domaine,
+          ville,
+          contactPerson: fullName,
         });
       }
 
@@ -301,27 +294,35 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                 {role === 'entreprise' && (
                   <>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700">Nom de l'entreprise</label>
-                      <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                      <label className="block text-sm font-medium text-slate-700">Nom de l'entreprise *</label>
+                      <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Aibra Tech" />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Nom du contact RH *</label>
+                      <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Karima Benali" />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-slate-700">Téléphone de contact</label>
-                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="+212 6XX XXX XXX" />
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700">Description</label>
-                      <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Secteur d'activité *</label>
+                      <select value={domaine} onChange={e => setDomaine(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="Informatique">Informatique / Tech</option>
+                        <option value="RH">Ressources Humaines</option>
+                        <option value="Comptabilité">Finance & Comptabilité</option>
+                        <option value="Marketing">Marketing & Communication</option>
+                        <option value="Mécanique">Ingénierie & Industrie</option>
+                        <option value="Administration">Administration & Services</option>
+                        <option value="Agriculture">Agroalimentaire</option>
+                        <option value="Autre">Autre secteur</option>
+                      </select>
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Logo de l'entreprise</label>
-                      <div className="flex items-center gap-3">
-                        <input type="file" id="logo-upload" accept="image/*" className="hidden" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
-                        <label htmlFor="logo-upload" className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
-                          <Upload className="w-4 h-4 text-emerald-600" />
-                          {logoFile ? 'Changer le logo' : 'Sélectionner une image'}
-                        </label>
-                        {logoFile && <span className="text-sm text-slate-500 truncate max-w-[200px]">{logoFile.name}</span>}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Ville / Siège social *</label>
+                      <select value={ville} onChange={e => setVille(e.target.value)} className="mt-1 block w-full py-2.5 px-3 sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                        {['Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'El Jadida', 'Kénitra', 'Tétouan', 'Nador', 'Autre ville'].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                     </div>
                   </>
                 )}

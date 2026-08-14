@@ -28,6 +28,8 @@ export type MoroccanCity =
 export type UserRole = 'candidat' | 'entreprise' | 'admin';
 export type JobStatus = 'pending' | 'approved' | 'rejected';
 
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+
 export interface Profile {
   id: string;
   role: UserRole;
@@ -49,6 +51,16 @@ export interface Company extends Profile {
   description?: string;
   logoUrl?: string;
   phone?: string;
+  secteur?: string;
+  ville?: string;
+  contactPerson?: string;
+  website?: string;
+  workforceSize?: string;
+  iceNumber?: string;
+  linkedinUrl?: string;
+  verificationStatus: VerificationStatus;
+  rejectionReason?: string;
+  email?: string;
 }
 
 export interface JobOffer {
@@ -57,6 +69,7 @@ export interface JobOffer {
   company: string;
   companyLogo?: string;
   companyInitials: string;
+  companyIsVerified?: boolean;
   city: MoroccanCity;
   contractType: ContractType;
   category: JobCategory;
@@ -122,6 +135,15 @@ export interface DbCompany {
   description: string | null;
   logo_url: string | null;
   phone: string | null;
+  secteur: string | null;
+  ville: string | null;
+  contact_person: string | null;
+  website: string | null;
+  workforce_size: string | null;
+  ice_number: string | null;
+  linkedin_url: string | null;
+  verification_status: string | null;
+  rejection_reason: string | null;
   created_at: string;
 }
 
@@ -151,6 +173,11 @@ export interface DbJobOffer {
   company_id: string | null;
   domaine: string | null;
   status: string;
+  companies?: {
+    verification_status?: string;
+  } | {
+    verification_status?: string;
+  }[];
 }
 
 // ─── Conversion helpers ────────────────────────────────────────────────────────
@@ -172,34 +199,40 @@ const formatPublishedAt = (isoDate: string): string => {
 };
 
 /** Convertit une ligne DB → JobOffer applicatif */
-export const dbToJobOffer = (row: DbJobOffer): JobOffer => ({
-  id: row.id,
-  title: row.title,
-  company: row.company,
-  companyLogo: row.logo_url ?? undefined,
-  companyInitials: row.company_initials,
-  city: row.location as MoroccanCity,
-  contractType: row.contract_type as ContractType,
-  category: row.category as JobCategory,
-  publishedAt: formatPublishedAt(row.created_at),
-  createdAtISO: row.created_at,
-  description: row.description,
-  missions: Array.isArray(row.missions) ? row.missions : [],
-  profile: Array.isArray(row.profile_requirements) ? row.profile_requirements : [],
-  contactEmail: row.contact_email,
-  contactPhone: row.contact_phone ?? undefined,
-  contactSubject: row.contact_subject ?? undefined,
-  originalLink: row.original_link ?? undefined,
-  salaryRange: row.salary_range ?? undefined,
-  experienceLevel: row.experience_level as JobOffer['experienceLevel'],
-  featured: row.featured,
-  isActive: row.is_active,
-  viewsCount: row.views_count,
-  applicationsCount: row.applications_count,
-  companyId: row.company_id ?? undefined,
-  domaine: row.domaine ?? undefined,
-  status: (row.status as JobStatus) || 'approved',
-});
+export const dbToJobOffer = (row: DbJobOffer): JobOffer => {
+  const companyObj = Array.isArray(row.companies) ? row.companies[0] : row.companies;
+  const isVerified = companyObj?.verification_status === 'verified';
+
+  return {
+    id: row.id,
+    title: row.title,
+    company: row.company,
+    companyLogo: row.logo_url ?? undefined,
+    companyInitials: row.company_initials,
+    companyIsVerified: isVerified,
+    city: row.location as MoroccanCity,
+    contractType: row.contract_type as ContractType,
+    category: row.category as JobCategory,
+    publishedAt: formatPublishedAt(row.created_at),
+    createdAtISO: row.created_at,
+    description: row.description,
+    missions: Array.isArray(row.missions) ? row.missions : [],
+    profile: Array.isArray(row.profile_requirements) ? row.profile_requirements : [],
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone ?? undefined,
+    contactSubject: row.contact_subject ?? undefined,
+    originalLink: row.original_link ?? undefined,
+    salaryRange: row.salary_range ?? undefined,
+    experienceLevel: row.experience_level as JobOffer['experienceLevel'],
+    featured: row.featured,
+    isActive: row.is_active,
+    viewsCount: row.views_count,
+    applicationsCount: row.applications_count,
+    companyId: row.company_id ?? undefined,
+    domaine: row.domaine ?? undefined,
+    status: (row.status as JobStatus) || 'approved',
+  };
+};
 
 /** Convertit un JobOffer applicatif → payload DB (INSERT/UPDATE) */
 export const jobOfferToDb = (

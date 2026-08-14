@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { JobOffer, JobCategory, MoroccanCity, ContractType } from '../types';
+import { JobOffer, JobCategory, MoroccanCity, ContractType, Company } from '../types';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
+import { fetchAllCompanies, updateCompanyVerificationStatus } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { supabase } from '../lib/supabaseClient';
 import { StatusBadge } from '../components/StatusBadge';
@@ -21,7 +22,12 @@ import {
   Loader2,
   Phone,
   Image as ImageIcon,
-  LogOut
+  LogOut,
+  BadgeCheck,
+  CheckCircle,
+  XCircle,
+  Building,
+  Clock
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -37,13 +43,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onJobUpdated,
   onAllJobsCleared
 }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation' | 'companies'>('manage');
   const [jobs, setJobs] = useState<JobOffer[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingCompanyId, setUpdatingCompanyId] = useState<string | null>(null);
 
   // Logo upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -53,6 +62,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // LinkedIn paste parser
   const [linkedInText, setLinkedInText] = useState('');
   const [parseNotice, setParseNotice] = useState('');
+
+  const loadCompanies = async () => {
+    setIsLoadingCompanies(true);
+    try {
+      const all = await fetchAllCompanies();
+      setCompanies(all);
+    } catch (err) {
+      console.error('Erreur chargement entreprises:', err);
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'companies') {
+      loadCompanies();
+    }
+  }, [activeTab]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -323,6 +350,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   };
 
 
+  const handleVerifyCompany = async (companyId: string, status: 'verified' | 'rejected') => {
+    let rejectionReason: string | undefined;
+    if (status === 'rejected') {
+      const reason = window.prompt("Motif du rejet (optionnel) :");
+      if (reason === null) return;
+      rejectionReason = reason;
+    }
+
+    setUpdatingCompanyId(companyId);
+    try {
+      await updateCompanyVerificationStatus(companyId, status, rejectionReason);
+      setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, verificationStatus: status, rejectionReason } : c));
+    } catch (err: any) {
+      alert(`Erreur : ${err.message}`);
+    } finally {
+      setUpdatingCompanyId(null);
+    }
+  };
+
   const handleClearAll = async () => {
     if (jobs.length === 0) {
       alert('La liste des offres est déjà vide.');
@@ -400,6 +446,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 Modération ({jobs.filter(j => j.status === 'pending').length})
               </button>
               <button
+                onClick={() => setActiveTab('companies')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'companies' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Building2 className="w-4 h-4" />
+                Entreprises ({companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length})
+              </button>
+              <button
                 onClick={() => setActiveTab('add')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'add' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
@@ -409,6 +462,127 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Tab: Companies */}
+        {activeTab === 'companies' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Validation des Entreprises</h2>
+                <p className="text-sm text-slate-500 mt-1">Examinez les demandes d'inscription et vérifiez le numéro ICE des entreprises.</p>
+              </div>
+              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                {companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length} en attente
+              </span>
+            </div>
+
+            {isLoadingCompanies ? (
+              <div className="flex items-center justify-center py-16 gap-3 text-slate-500">
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                <span>Chargement des entreprises...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+                      <th className="p-4 font-semibold">Entreprise & Contact</th>
+                      <th className="p-4 font-semibold">Secteur & Ville</th>
+                      <th className="p-4 font-semibold">ICE & Site Web</th>
+                      <th className="p-4 font-semibold text-center">Statut</th>
+                      <th className="p-4 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm divide-y divide-slate-100">
+                    {companies.map((comp) => (
+                      <tr key={comp.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-200 shrink-0">
+                              {comp.companyName.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{comp.companyName}</p>
+                              <p className="text-xs text-slate-500">{comp.contactPerson || 'Contact non renseigné'} {comp.phone ? `· ${comp.phone}` : ''}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <p className="font-semibold text-slate-700">{comp.secteur || 'Non précisé'}</p>
+                          <p className="text-xs text-slate-500">{comp.ville || 'Maroc'}</p>
+                        </td>
+                        <td className="p-4">
+                          {comp.iceNumber ? (
+                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200 font-bold">
+                              ICE: {comp.iceNumber}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">ICE non fourni</span>
+                          )}
+                          {comp.website && (
+                            <a href={comp.website} target="_blank" rel="noreferrer" className="block text-xs text-sky-600 hover:underline mt-1">
+                              {comp.website.replace(/^https?:\/\//, '')}
+                            </a>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          {comp.verificationStatus === 'verified' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              Vérifiée
+                            </span>
+                          )}
+                          {comp.verificationStatus === 'rejected' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                              <XCircle className="w-3.5 h-3.5 text-red-600" />
+                              Rejetée
+                            </span>
+                          )}
+                          {(comp.verificationStatus === 'pending' || !comp.verificationStatus) && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              En attente
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {comp.verificationStatus !== 'verified' && (
+                              <button
+                                onClick={() => handleVerifyCompany(comp.id, 'verified')}
+                                disabled={updatingCompanyId === comp.id}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                              >
+                                {updatingCompanyId === comp.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                                Approuver
+                              </button>
+                            )}
+                            {comp.verificationStatus !== 'rejected' && (
+                              <button
+                                onClick={() => handleVerifyCompany(comp.id, 'rejected')}
+                                disabled={updatingCompanyId === comp.id}
+                                className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-bold transition-all"
+                              >
+                                Rejeter
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {companies.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">
+                          Aucune entreprise inscrite pour le moment.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab: Manage */}
         {activeTab === 'manage' && (

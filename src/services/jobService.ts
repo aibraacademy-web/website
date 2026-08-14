@@ -13,7 +13,10 @@ const TABLE = 'job_offers';
 export const fetchJobs = async (): Promise<JobOffer[]> => {
   const { data, error } = await supabase
     .from(TABLE)
-    .select('*')
+    .select(`
+      *,
+      companies ( verification_status )
+    `)
     .eq('is_active', true)
     .eq('status', 'approved')
     .order('created_at', { ascending: false });
@@ -32,7 +35,10 @@ export const fetchJobs = async (): Promise<JobOffer[]> => {
 export const fetchAllJobs = async (): Promise<JobOffer[]> => {
   const { data, error } = await supabase
     .from(TABLE)
-    .select('*')
+    .select(`
+      *,
+      companies ( verification_status )
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
