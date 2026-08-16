@@ -27,7 +27,8 @@ import {
   CheckCircle,
   XCircle,
   Building,
-  Clock
+  Clock,
+  Copy
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -57,6 +58,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // Logo upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [duplicatedLogoUrl, setDuplicatedLogoUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // LinkedIn paste parser
@@ -237,9 +239,51 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     });
     setLogoFile(null);
     setLogoPreview(null);
+    setDuplicatedLogoUrl(null);
     setLinkedInText('');
     setParseNotice('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ─── Duplication d'offre ────────────────────────────────────────────────────
+
+  const handleDuplicate = (job: JobOffer) => {
+    // Pré-remplir le formulaire avec les données de l'offre originale
+    setFormData({
+      title: `${job.title} (copie)`,
+      company: job.company,
+      category: job.category,
+      city: job.city,
+      contractType: job.contractType,
+      experienceLevel: job.experienceLevel,
+      contactEmail: job.contactEmail,
+      contactPhone: job.contactPhone || '',
+      contactSubject: job.contactSubject || '',
+      salaryRange: job.salaryRange || '',
+      description: job.description,
+      missionsRaw: (job.missions || []).join('\n'),
+      profileRaw: (job.profile || []).join('\n'),
+      originalLink: job.originalLink || ''
+    });
+
+    // Réutiliser l'URL du logo existant (pas de re-upload)
+    if (job.companyLogo) {
+      setDuplicatedLogoUrl(job.companyLogo);
+      setLogoPreview(job.companyLogo);
+    } else {
+      setDuplicatedLogoUrl(null);
+      setLogoPreview(null);
+    }
+    setLogoFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setLinkedInText('');
+    setParseNotice('');
+
+    // Basculer vers l'onglet "Ajouter"
+    setActiveTab('add');
+
+    // Scroll vers le haut du formulaire
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -251,10 +295,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
     setIsSubmitting(true);
     try {
-      // 1. Upload logo si présent
+      // 1. Upload logo si présent, sinon réutiliser l'URL dupliquée
       let logoUrl: string | undefined;
       if (logoFile) {
         logoUrl = await uploadLogo(logoFile);
+      } else if (duplicatedLogoUrl) {
+        logoUrl = duplicatedLogoUrl;
       }
 
       // 2. Préparer les données
@@ -282,6 +328,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         originalLink: formData.originalLink || undefined,
         featured: true,
         isActive: true,
+        status: 'approved'
       });
 
       onJobAdded(created);
@@ -656,6 +703,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               }
                             </button>
 
+                            {/* Dupliquer */}
+                            <button
+                              onClick={() => handleDuplicate(job)}
+                              title="Dupliquer l'offre"
+                              className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+
                             {/* Supprimer */}
                             <button
                               onClick={() => handleDelete(job)}
@@ -765,6 +821,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
 
+                {/* Bandeau de duplication */}
+                {duplicatedLogoUrl !== null || formData.title.endsWith('(copie)') ? (
+                  <div className="flex items-center gap-3 p-3 bg-sky-50 border border-sky-200 rounded-2xl text-sky-800 text-sm font-medium">
+                    <Copy className="w-4 h-4 shrink-0 text-sky-600" />
+                    <span>Formulaire pré-rempli par duplication. Modifiez les champs souhaités puis cliquez sur <strong>Publier</strong>.</span>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="ml-auto p-1 rounded-lg hover:bg-sky-100 transition-colors"
+                      title="Réinitialiser le formulaire"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : null}
+
                 {/* Section: LinkedIn paste */}
                 <div className="space-y-4 pb-6 border-b border-slate-200 bg-slate-50 p-4 rounded-3xl">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
@@ -827,15 +899,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <Upload className="w-4 h-4" />
                           Choisir un logo
                         </label>
-                        {logoFile && (
+                        {(logoFile || duplicatedLogoUrl) && (
                           <button
                             type="button"
-                            onClick={handleRemoveLogo}
+                            onClick={() => { handleRemoveLogo(); setDuplicatedLogoUrl(null); }}
                             className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
                           >
                             <X className="w-3 h-3" />
                             Supprimer
                           </button>
+                        )}
+                        {duplicatedLogoUrl && !logoFile && (
+                          <p className="text-xs text-sky-600 flex items-center gap-1">
+                            <Copy className="w-3 h-3" /> Logo copié de l'offre originale
+                          </p>
                         )}
                         <p className="text-xs text-slate-400">JPG, PNG, WebP · Max 5 Mo</p>
                       </div>
