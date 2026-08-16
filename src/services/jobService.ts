@@ -126,6 +126,7 @@ export const updateJobOffer = async (id: string, fields: Partial<JobOffer>): Pro
   if (fields.companyInitials !== undefined) dbFields.company_initials = fields.companyInitials;
   if (fields.missions !== undefined)       dbFields.missions = fields.missions;
   if (fields.profile !== undefined)        dbFields.profile_requirements = fields.profile;
+  if (fields.benefits !== undefined)       dbFields.benefits = fields.benefits ?? [];
   if (fields.contactSubject !== undefined) dbFields.contact_subject = fields.contactSubject ?? null;
   if (fields.originalLink !== undefined)   dbFields.original_link = fields.originalLink ?? null;
   if (fields.featured !== undefined)       dbFields.featured = fields.featured;

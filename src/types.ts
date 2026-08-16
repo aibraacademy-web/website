@@ -78,6 +78,7 @@ export interface JobOffer {
   description: string;
   missions: string[];
   profile: string[];
+  benefits?: string[];
   contactEmail: string;
   contactPhone?: string;
   contactSubject?: string;
@@ -165,6 +166,7 @@ export interface DbJobOffer {
   company_initials: string;
   missions: string[];
   profile_requirements: string[];
+  benefits?: string[] | null;
   contact_subject: string | null;
   original_link: string | null;
   featured: boolean;
@@ -218,6 +220,7 @@ export const dbToJobOffer = (row: DbJobOffer): JobOffer => {
     description: row.description,
     missions: Array.isArray(row.missions) ? row.missions : [],
     profile: Array.isArray(row.profile_requirements) ? row.profile_requirements : [],
+    benefits: Array.isArray(row.benefits) ? row.benefits : [],
     contactEmail: row.contact_email,
     contactPhone: row.contact_phone ?? undefined,
     contactSubject: row.contact_subject ?? undefined,
@@ -253,6 +256,7 @@ export const jobOfferToDb = (
   company_initials: job.companyInitials,
   missions: job.missions,
   profile_requirements: job.profile,
+  benefits: job.benefits ?? [],
   contact_subject: job.contactSubject ?? null,
   original_link: job.originalLink ?? null,
   featured: job.featured ?? false,

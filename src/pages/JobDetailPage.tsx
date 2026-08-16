@@ -69,6 +69,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
   };
 
   const { competences, profile: filteredProfile } = extractCompetences();
+  const benefits = job.benefits || [];
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/offres/${job.id}`);
@@ -293,6 +294,23 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                       <li key={idx} className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Benefits / Ce que nous offrons */}
+              {benefits.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-lg font-extrabold text-slate-900 font-serif border-l-4 border-emerald-600 pl-3">
+                    Ce que nous offrons
+                  </h2>
+                  <ul className="space-y-2 text-sm text-slate-700">
+                    {benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{benefit}</span>
                       </li>
                     ))}
                   </ul>
