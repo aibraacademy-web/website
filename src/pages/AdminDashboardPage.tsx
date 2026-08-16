@@ -416,26 +416,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
-  const handleClearAll = async () => {
-    if (jobs.length === 0) {
-      alert('La liste des offres est déjà vide.');
-      return;
-    }
-    const confirmed = window.confirm(
-      `⚠️ Attention ! Vous allez supprimer TOUTES les ${jobs.length} offres.\n\nCette action est irréversible.\n\nContinuer ?`
-    );
-    if (!confirmed) return;
-
-    try {
-      await clearAllJobOffers();
-      setJobs([]);
-      onAllJobsCleared();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      alert(`Erreur : ${msg}`);
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -466,15 +446,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             >
               <LogOut className="w-4 h-4" />
               Déconnexion
-            </button>
-
-            <button
-              onClick={handleClearAll}
-              title="Supprimer toutes les offres"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 transition-all"
-            >
-              <AlertTriangle className="w-4 h-4" />
-              Réinitialiser
             </button>
 
             <div className="flex bg-slate-100 p-1 rounded-xl">
