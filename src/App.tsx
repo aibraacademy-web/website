@@ -306,9 +306,15 @@ export default function App() {
           <LoginPage onNavigate={handleNavigate} />
         )}
 
-        {currentTab === 'register' && (
+        {/* TODO: RÉACTIVER L'INSCRIPTION — Décommentez les lignes ci-dessous (et commentez le useEffect de redirection) pour réactiver la page /register */}
+        {/* {currentTab === 'register' && (
           <RegisterPage onNavigate={handleNavigate} />
-        )}
+        )} */}
+        {currentTab === 'register' && (() => {
+          // Redirection temporaire : /register → accueil tant que le flux d'inscription est en maintenance
+          handleNavigate('home');
+          return null;
+        })()}
 
         {currentTab === 'candidat-dashboard' && (
           <AuthGuard allowedRoles={['candidat']} onRedirect={handleNavigate}>

@@ -156,13 +156,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <LogIn className="w-4 h-4" />
                   <span>Connexion</span>
                 </button>
-                <button
+                {/* TODO: RÉACTIVER L'INSCRIPTION — Décommentez le bloc ci-dessous pour réafficher le bouton "Inscription" dans la navbar desktop */}
+                {/* <button
                   onClick={() => handleNavClick('register')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-all shadow-sm"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Inscription</span>
-                </button>
+                </button> */}
               </div>
             )}
 
@@ -233,13 +234,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <LogIn className="w-4 h-4" />
                   Connexion
                 </button>
-                <button
+                {/* TODO: RÉACTIVER L'INSCRIPTION — Décommentez le bloc ci-dessous pour réafficher le bouton "Inscription" dans le menu mobile */}
+                {/* <button
                   onClick={() => handleNavClick('register')}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm"
                 >
                   <UserPlus className="w-4 h-4" />
                   Inscription gratuite
-                </button>
+                </button> */}
               </>
             )}
           </div>
