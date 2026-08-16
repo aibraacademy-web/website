@@ -46,6 +46,30 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
 
   const isSaved = savedJobIds.includes(job.id);
 
+  // Extract skills/competences from profile (typically the first line if it starts with "Compétences" or "Skills")
+  const extractCompetences = () => {
+    if (!job.profile || job.profile.length === 0) return { competences: [], profile: [] };
+    
+    let competences: string[] = [];
+    let profileFiltered = [...job.profile];
+    
+    // Check if first item looks like competences (contains "Compétence", "Skill", or comma-separated words)
+    const firstItem = job.profile[0]?.toLowerCase() || '';
+    if (firstItem.includes('compétence') || firstItem.includes('skill') || (firstItem.match(/,/g) || []).length > 1) {
+      const competenceLine = job.profile[0];
+      // Split by comma and clean up
+      competences = competenceLine
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c.length > 0 && !c.toLowerCase().includes('compétence') && !c.toLowerCase().includes('skill'));
+      profileFiltered = job.profile.slice(1);
+    }
+    
+    return { competences, profile: profileFiltered };
+  };
+
+  const { competences, profile: filteredProfile } = extractCompetences();
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/offres/${job.id}`);
     setCopiedLink(true);
@@ -184,14 +208,42 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
             {/* Left Main Content */}
             <div className="lg:col-span-2 space-y-8 text-slate-800">
               
-              {/* Description */}
-              <div className="space-y-3">
+              {/* Presentation - Structured Info Grid */}
+              <div className="space-y-4">
                 <h2 className="text-lg font-extrabold text-slate-900 font-serif border-l-4 border-emerald-600 pl-3">
                   Présentation de l'offre
                 </h2>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                  {job.description}
-                </p>
+                
+                {/* Info Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Entreprise</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.company}</p>
+                  </div>
+                  
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Secteur d'activité</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.category || 'Non spécifié'}</p>
+                  </div>
+                  
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Niveau d'expérience</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.experienceLevel}</p>
+                  </div>
+                  
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Type de contrat</p>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.contractType}</p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <p className="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-2">Description du poste</p>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                    {job.description}
+                  </p>
+                </div>
               </div>
 
               {/* Missions */}
@@ -211,14 +263,33 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                 </div>
               )}
 
-              {/* Profil recherché */}
-              {job.profile && job.profile.length > 0 && (
+              {/* Competences Section */}
+              {competences.length > 0 && (
                 <div className="space-y-3">
                   <h2 className="text-lg font-extrabold text-slate-900 font-serif border-l-4 border-emerald-600 pl-3">
-                    Profil recherché & Compétences
+                    Compétences requises
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {competences.map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-block"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Profil recherché */}
+              {filteredProfile && filteredProfile.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-lg font-extrabold text-slate-900 font-serif border-l-4 border-emerald-600 pl-3">
+                    Profil recherché
                   </h2>
                   <ul className="space-y-2 text-sm text-slate-700">
-                    {job.profile.map((item, idx) => (
+                    {filteredProfile.map((item, idx) => (
                       <li key={idx} className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{item}</span>
