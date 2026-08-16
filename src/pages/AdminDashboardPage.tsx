@@ -162,34 +162,50 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const parseLinkedInText = (rawText: string) => {
     const cleanText = rawText.replace(/\r/g, '');
     const lines = cleanText.split('\n').map(line => line.trim()).filter(Boolean);
-    const fullText = cleanText.toLowerCase();
     const titleLine = lines[0] || '';
-    const title = titleLine.replace(/^offre\s+d['']emploi\s*[:\-]?\s*/i, '').trim() || titleLine;
-    const companyMatch = cleanText.match(/chez\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ0-9&''\-\s]+)/i) || cleanText.match(/entreprise\s*[:\-]\s*([A-Za-zÀ-ÿ0-9&''\-\s]+)/i);
+    const title = titleLine.replace(/^offre\s+d['’]emploi\s*[:\-]?\s*/i, '').trim() || titleLine;
+    const companyMatch = cleanText.match(/chez\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ0-9&'’\-\s]+)/i) || cleanText.match(/entreprise\s*[:\-]\s*([A-Za-zÀ-ÿ0-9&'’\-\s]+)/i);
     const company = companyMatch ? companyMatch[1].trim().split('\n')[0] : '';
     const city = cities.find(city => new RegExp(`\\b${city}\\b`, 'i').test(cleanText));
-    const contractType = normalizeContractType(fullText);
+    const contractType = normalizeContractType(cleanText.toLowerCase());
 
-    const findSectionStart = (pattern: RegExp) => lines.findIndex(line => pattern.test(line));
-    const missionStart = findSectionStart(/(?:m[iî]ssions|🎯)/i);
-    const profileStart = findSectionStart(/(?:profil|👤)/i);
-    const subjectStart = findSectionStart(/objet\s*(?:du)?\s*(?:mail|email)/i);
+    // Define heading patterns to reliably split sections
+    const headingPatterns: { key: string; pattern: RegExp }[] = [
+      { key: 'missions', pattern: /^(?:m[iî]ssions|🎯|responsabilit)/i },
+      { key: 'profile', pattern: /^(?:profil(?: recherch[eé])?|👤)/i },
+      { key: 'competences', pattern: /^(?:comp[eé]tences?|skills?|aptitudes)/i },
+      { key: 'offers', pattern: /^(?:ce que nous offrons|nous offrons|avantages|conditions)/i },
+      { key: 'contact', pattern: /^(?:candidature|contact|📧|email|mail|📩)/i },
+    ];
 
-    const descriptionEnd = [missionStart, profileStart, subjectStart].filter(idx => idx >= 0).sort((a, b) => a - b)[0];
-    const descriptionLines = lines.slice(1, descriptionEnd >= 0 ? descriptionEnd : 5)
-      .filter(line => !/^(🎯|👤|📧|📝|lieu|ville|contrat|type|poste|expérience|experience)\b/i.test(line));
+    // Find heading indices
+    const foundHeadings: { key: string; idx: number }[] = headingPatterns
+      .map(h => ({ key: h.key, idx: lines.findIndex(l => h.pattern.test(l)) }))
+      .filter(h => h.idx >= 0)
+      .sort((a, b) => a.idx - b.idx);
+
+    // Description is the text between the title (line 0) and the first detected heading
+    const firstHeadingIdx = foundHeadings.length > 0 ? foundHeadings[0].idx : -1;
+    const descriptionEnd = firstHeadingIdx >= 0 ? firstHeadingIdx : Math.min(5, lines.length);
+    const descriptionLines = lines.slice(1, descriptionEnd).filter(line => !/^(?:lieu|ville|contrat|type|poste|expérience|experience)\b/i.test(line));
     const description = descriptionLines.join(' ');
 
-    const extractSection = (startIdx: number) => {
-      if (startIdx < 0) return [];
-      const stopIdx = lines.findIndex((line, idx) => idx > startIdx && /^(?:👤|📧|📝|🎯|objet\b|candidature\b|merci\b)/i.test(line));
-      return lines.slice(startIdx + 1, stopIdx >= 0 ? stopIdx : undefined)
-        .map(line => line.replace(/^[•\-►→\*\s]+/, '').trim())
-        .filter(Boolean);
+    // Helper to extract section between a heading and the next heading (or end)
+    const extractSectionByKey = (key: string) => {
+      const heading = foundHeadings.find(h => h.key === key);
+      if (!heading) return [];
+      const start = heading.idx + 1;
+      const following = foundHeadings.find(h => h.idx > heading.idx);
+      const end = following ? following.idx : lines.length;
+      return lines.slice(start, end).map(line => line.replace(/^[•\-►→\*\s]+/, '').trim()).filter(Boolean);
     };
 
-    const missions = extractSection(missionStart);
-    const profile = extractSection(profileStart);
+    const missions = extractSectionByKey('missions');
+    const profile = extractSectionByKey('profile');
+    const competences = extractSectionByKey('competences');
+    const offers = extractSectionByKey('offers');
+
+    // Contact extraction: try to extract email and subject anywhere in text
     const emailMatch = cleanText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     const contactEmail = emailMatch ? emailMatch[0] : '';
     const subjectMatch = cleanText.match(/objet\s*(?:du)?\s*(?:mail|email)\s*[:\-]?\s*(.*)/i);
@@ -197,7 +213,35 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const linkMatch = cleanText.match(/https?:\/\/\S+/i);
     const originalLink = linkMatch ? linkMatch[0] : '';
 
-    return { title, company, city, contractType, description, missionsRaw: missions.join('\n'), profileRaw: profile.join('\n'), contactEmail, contactSubject, originalLink };
+    // If competences were not found as a heading but appear as a comma-separated line in profile, extract them
+    let finalCompetences = competences;
+    let finalProfile = profile;
+    if (finalCompetences.length === 0 && finalProfile.length > 0) {
+      const first = finalProfile[0] || '';
+      if ((first.match(/,/g) || []).length >= 1 && /[a-zA-Z]{2,}/.test(first)) {
+        const extracted = first.split(',').map(s => s.trim()).filter(Boolean);
+        // Heuristic: if there are more than 1 items, treat as competences
+        if (extracted.length > 1) {
+          finalCompetences = extracted.filter(c => !/comp[eé]tence|skill/i.test(c));
+          finalProfile = finalProfile.slice(1);
+        }
+      }
+    }
+
+    return {
+      title,
+      company,
+      city,
+      contractType,
+      description,
+      missionsRaw: missions.join('\n'),
+      profileRaw: finalProfile.join('\n'),
+      competencesRaw: finalCompetences.join(', '),
+      offersRaw: offers.join('\n'),
+      contactEmail,
+      contactSubject,
+      originalLink
+    };
   };
 
   const handleParseText = () => {
