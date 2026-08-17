@@ -104,7 +104,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   });
 
   const categories: JobCategory[] = ['RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing', 'Commercial', 'Logistique', 'Santé', 'Éducation', 'BTP', 'Finance', 'Hôtellerie', 'Juridique', 'Autre'];
-  const cities: MoroccanCity[] = ['Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'El Jadida', 'Kénitra', 'Tétouan', 'Nador', 'Salé', 'Mohammedia', 'Beni Mellal', 'Settat', 'Laâyoune', 'Berrechid', 'Safi', 'Essaouira', 'Errachidia', 'Taza', 'Guelmim', 'Dakhla', 'Autre ville'];
+  const cities: MoroccanCity[] = [
+    'Agadir', 'Al Hoceïma', 'Aousserd', 'Assa-Zag', 'Azilal', 'Azrou', 'Béni Mellal', 'Berkane', 'Berrechid', 'Boujdour', 'Bouskoura', 'Casablanca', 'Chefchaouen', 'Chichaoua', 'Dakhla', 'Demnate', 'Driouch', 'El Jadida', 'El Kelaâ des Sraghna', 'Errachidia', 'Essaouira', 'Fès', 'Fquih Ben Salah', 'Guelmim', 'Guelta Zemmour', 'Guercif', 'Ifrane', 'Jerada', 'Kénitra', 'Khemisset', 'Khouribga', 'Ksar El Kébir', 'Laâyoune', 'Larache', 'Marrakech', 'Meknès', 'Midelt', 'Mohammedia', 'Nador', 'Ouarzazate', 'Ouazzane', 'Oued Zem', 'Oujda', 'Rabat', 'Rhamna (Benguerir)', 'Safi', 'Salé', 'Sefrou', 'Settat', 'Sidi Bennour', 'Sidi Ifni', 'Sidi Kacem', 'Sidi Slimane', 'Smara', 'Tan-Tan', 'Tanger', 'Taourirt', 'Taroudant', 'Tata', 'Taza', 'Témara', 'Tétouan', 'Tifelt', 'Tinghir', 'Tiznit', 'Youssoufia', 'Zagora', 'Zemamra', 'Autre ville'
+  ];
   const contractTypes: ContractType[] = ['CDI', 'CDD', 'Stage / PFE', 'Alternance', 'Intérim'];
   const experienceLevels: JobOffer['experienceLevel'][] = ['Débutant (0-1 an)', '1 à 3 ans', '3 à 5 ans', 'Stage PFE', 'Tous niveaux'];
 

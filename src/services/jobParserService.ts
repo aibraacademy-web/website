@@ -2,10 +2,7 @@ import { JobCategory, MoroccanCity, ContractType, JobOffer } from '../types';
 
 // Arrays for the parser to use
 const cities: MoroccanCity[] = [
-  'Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 
-  'El Jadida', 'Kénitra', 'Tétouan', 'Nador', 'Salé', 'Mohammedia', 'Beni Mellal', 
-  'Settat', 'Laâyoune', 'Berrechid', 'Safi', 'Essaouira', 'Errachidia', 'Taza', 
-  'Guelmim', 'Dakhla', 'Autre ville'
+  'Agadir', 'Al Hoceïma', 'Aousserd', 'Assa-Zag', 'Azilal', 'Azrou', 'Béni Mellal', 'Berkane', 'Berrechid', 'Boujdour', 'Bouskoura', 'Casablanca', 'Chefchaouen', 'Chichaoua', 'Dakhla', 'Demnate', 'Driouch', 'El Jadida', 'El Kelaâ des Sraghna', 'Errachidia', 'Essaouira', 'Fès', 'Fquih Ben Salah', 'Guelmim', 'Guelta Zemmour', 'Guercif', 'Ifrane', 'Jerada', 'Kénitra', 'Khemisset', 'Khouribga', 'Ksar El Kébir', 'Laâyoune', 'Larache', 'Marrakech', 'Meknès', 'Midelt', 'Mohammedia', 'Nador', 'Ouarzazate', 'Ouazzane', 'Oued Zem', 'Oujda', 'Rabat', 'Rhamna (Benguerir)', 'Safi', 'Salé', 'Sefrou', 'Settat', 'Sidi Bennour', 'Sidi Ifni', 'Sidi Kacem', 'Sidi Slimane', 'Smara', 'Tan-Tan', 'Tanger', 'Taourirt', 'Taroudant', 'Tata', 'Taza', 'Témara', 'Tétouan', 'Tifelt', 'Tinghir', 'Tiznit', 'Youssoufia', 'Zagora', 'Zemamra', 'Autre ville'
 ];
 
 export const detectContractType = (raw: string): ContractType | undefined => {
