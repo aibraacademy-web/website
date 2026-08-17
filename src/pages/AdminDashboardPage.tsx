@@ -88,10 +88,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [formData, setFormData] = useState({
     title: '',
     company: '',
-    category: 'RH' as JobCategory,
-    city: 'Casablanca' as MoroccanCity,
-    contractType: 'CDI' as ContractType,
-    experienceLevel: 'Débutant (0-1 an)' as JobOffer['experienceLevel'],
+    category: '' as unknown as JobCategory,
+    city: '' as unknown as MoroccanCity,
+    contractType: '' as unknown as ContractType,
+    experienceLevel: '' as unknown as JobOffer['experienceLevel'],
     contactEmail: '',
     contactPhone: '',
     contactSubject: '',
@@ -103,8 +103,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     originalLink: ''
   });
 
-  const categories: JobCategory[] = ['RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing', 'Autre'];
-  const cities: MoroccanCity[] = ['Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'El Jadida', 'Kénitra', 'Tétouan', 'Nador', 'Autre ville'];
+  const categories: JobCategory[] = ['RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing', 'Commercial', 'Logistique', 'Santé', 'Éducation', 'BTP', 'Finance', 'Hôtellerie', 'Juridique', 'Autre'];
+  const cities: MoroccanCity[] = ['Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'El Jadida', 'Kénitra', 'Tétouan', 'Nador', 'Salé', 'Mohammedia', 'Beni Mellal', 'Settat', 'Laâyoune', 'Berrechid', 'Safi', 'Essaouira', 'Errachidia', 'Taza', 'Guelmim', 'Dakhla', 'Autre ville'];
   const contractTypes: ContractType[] = ['CDI', 'CDD', 'Stage / PFE', 'Alternance', 'Intérim'];
   const experienceLevels: JobOffer['experienceLevel'][] = ['Débutant (0-1 an)', '1 à 3 ans', '3 à 5 ans', 'Stage PFE', 'Tous niveaux'];
 
@@ -207,8 +207,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const resetForm = () => {
     setFormData({
-      title: '', company: '', category: 'RH', city: 'Casablanca',
-      contractType: 'CDI', experienceLevel: 'Débutant (0-1 an)',
+      title: '', company: '', category: '' as unknown as JobCategory, city: '' as unknown as MoroccanCity,
+      contractType: '' as unknown as ContractType, experienceLevel: '' as unknown as JobOffer['experienceLevel'],
       contactEmail: '', contactPhone: '', contactSubject: '',
       salaryRange: '', description: '', missionsRaw: '', profileRaw: '', benefitsRaw: '', originalLink: ''
     });
@@ -929,28 +929,32 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Secteur *</label>
-                      <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value as JobCategory })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <select required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value as JobCategory })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="" disabled>Sélectionner un secteur</option>
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Ville *</label>
-                      <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value as MoroccanCity })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <select required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value as MoroccanCity })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="" disabled>Sélectionner une ville</option>
                         {cities.map(city => <option key={city} value={city}>{city}</option>)}
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contrat *</label>
-                      <select value={formData.contractType} onChange={(e) => setFormData({ ...formData, contractType: e.target.value as ContractType })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <select required value={formData.contractType} onChange={(e) => setFormData({ ...formData, contractType: e.target.value as ContractType })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="" disabled>Sélectionner un contrat</option>
                         {contractTypes.map(ct => <option key={ct} value={ct}>{ct}</option>)}
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Expérience *</label>
-                      <select value={formData.experienceLevel} onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value as JobOffer['experienceLevel'] })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <select required value={formData.experienceLevel} onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value as JobOffer['experienceLevel'] })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="" disabled>Sélectionner un niveau</option>
                         {experienceLevels.map(exp => <option key={exp} value={exp}>{exp}</option>)}
                       </select>
                     </div>
