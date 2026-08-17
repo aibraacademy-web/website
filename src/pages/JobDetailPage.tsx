@@ -83,8 +83,9 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
     setTimeout(() => setCopiedEmail(false), 2500);
   };
 
-  const handleWhatsAppShare = () => {
-    const text = encodeURIComponent(`Découvre cette offre d'emploi sur Aibra Academy : ${job.title} chez ${job.company} à ${job.city}.\nContact email: ${job.contactEmail}`);
+  const handleShare = () => {
+    const companyText = job.company || 'une entreprise confidentielle';
+    const text = encodeURIComponent(`Découvre cette offre d'emploi sur Aibra Academy : ${job.title} chez ${companyText} à ${job.city}.\nContact email: ${job.contactEmail}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
@@ -130,13 +131,15 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
 
                   <p className="text-sm font-semibold text-slate-300 flex flex-wrap items-center gap-2">
                     <Building2 className="w-4 h-4 text-emerald-400" />
-                    <span>{job.company}</span>
-                    {job.companyIsVerified && (
+                    <div className="flex items-center gap-2 min-w-0">
+                    <span>{job.company || 'Entreprise confidentielle'}</span>
+                    {job.companyIsVerified && job.company && (
                       <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
                         <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
                         Entreprise vérifiée
                       </span>
                     )}
+                    </div>
                   </p>
                 </div>
               </div>
@@ -156,7 +159,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                 </button>
 
                 <button
-                  onClick={handleWhatsAppShare}
+                  onClick={handleShare}
                   className="p-3 rounded-xl bg-white/10 text-slate-200 hover:bg-white/20 border border-white/20 transition-all"
                   title="Partager sur WhatsApp"
                 >
@@ -219,7 +222,9 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                     <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Entreprise</p>
-                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.company}</p>
+                    <div>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">{job.company || 'Entreprise confidentielle'}</p>
+                  </div>
                   </div>
                   
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">

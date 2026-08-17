@@ -184,7 +184,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const missing = [];
 
     if (parsed.title) detected.push('Titre'); else missing.push('Titre');
-    if (parsed.company) detected.push('Entreprise'); else missing.push('Entreprise');
+    if (parsed.company) detected.push('Entreprise');
     if (parsed.city) detected.push('Ville'); else missing.push('Ville');
     if (parsed.category) detected.push('Secteur'); else missing.push('Secteur');
     if (parsed.contractType) detected.push('Contrat'); else missing.push('Contrat');
@@ -267,7 +267,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.company || !formData.contactEmail || !formData.description) {
+    if (!formData.title || !formData.contactEmail || !formData.description) {
       alert('Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -283,7 +283,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       }
 
       // 2. Préparer les données
-      const initials = formData.company.trim().split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'AB';
+      const initials = formData.company.trim() ? formData.company.trim().split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'EC';
       const missions = formData.missionsRaw.split('\n').map(m => m.trim()).filter(m => m.length > 0);
       const profile = formData.profileRaw.split('\n').map(p => p.trim()).filter(p => p.length > 0);
 
