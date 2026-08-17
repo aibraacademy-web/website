@@ -3,8 +3,8 @@ import { JobOffer, JobCategory, MoroccanCity, ContractType, Company } from '../t
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
 import { fetchAllCompanies, updateCompanyVerificationStatus } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
+import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
-import { StatusBadge } from '../components/StatusBadge';
 import { 
   PlusCircle, 
   Building2, 
@@ -63,7 +63,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // LinkedIn paste parser
   const [linkedInText, setLinkedInText] = useState('');
-  const [parseNotice, setParseNotice] = useState('');
+  const [parseNotice, setParseNotice] = useState<{ message: string, type: 'success' | 'warning' } | null>(null);
+  const [undetectedFields, setUndetectedFields] = useState<string[]>([]);
 
   const loadCompanies = async () => {
     setIsLoadingCompanies(true);
@@ -98,6 +99,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     description: '',
     missionsRaw: '',
     profileRaw: '',
+    benefitsRaw: '',
     originalLink: ''
   });
 
@@ -149,127 +151,56 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // ─── LinkedIn parser ────────────────────────────────────────────────────────
 
-  const normalizeContractType = (raw: string): ContractType | undefined => {
-    const n = raw.toLowerCase();
-    if (n.includes('cdi')) return 'CDI';
-    if (n.includes('cdd')) return 'CDD';
-    if (n.includes('alternance')) return 'Alternance';
-    if (n.includes('stage')) return 'Stage / PFE';
-    if (n.includes('intérim') || n.includes('interim')) return 'Intérim';
-    return undefined;
-  };
-
-  const parseLinkedInText = (rawText: string) => {
-    const cleanText = rawText.replace(/\r/g, '');
-    const lines = cleanText.split('\n').map(line => line.trim()).filter(Boolean);
-    const titleLine = lines[0] || '';
-    const title = titleLine.replace(/^offre\s+d['’]emploi\s*[:\-]?\s*/i, '').trim() || titleLine;
-    const companyMatch = cleanText.match(/chez\s+([A-ZÀ-Ÿ][A-Za-zÀ-ÿ0-9&'’\-\s]+)/i) || cleanText.match(/entreprise\s*[:\-]\s*([A-Za-zÀ-ÿ0-9&'’\-\s]+)/i);
-    const company = companyMatch ? companyMatch[1].trim().split('\n')[0] : '';
-    const city = cities.find(city => new RegExp(`\\b${city}\\b`, 'i').test(cleanText));
-    const contractType = normalizeContractType(cleanText.toLowerCase());
-
-    // Define heading patterns to reliably split sections
-    const headingPatterns: { key: string; pattern: RegExp }[] = [
-      { key: 'missions', pattern: /^(?:m[iî]ssions|🎯|responsabilit)/i },
-      { key: 'profile', pattern: /^(?:profil(?: recherch[eé])?|👤)/i },
-      { key: 'competences', pattern: /^(?:comp[eé]tences?|skills?|aptitudes)/i },
-      { key: 'offers', pattern: /^(?:ce que nous offrons|nous offrons|avantages|conditions)/i },
-      { key: 'contact', pattern: /^(?:candidature|contact|📧|email|mail|📩)/i },
-    ];
-
-    // Find heading indices
-    const foundHeadings: { key: string; idx: number }[] = headingPatterns
-      .map(h => ({ key: h.key, idx: lines.findIndex(l => h.pattern.test(l)) }))
-      .filter(h => h.idx >= 0)
-      .sort((a, b) => a.idx - b.idx);
-
-    // Description is the text between the title (line 0) and the first detected heading
-    const firstHeadingIdx = foundHeadings.length > 0 ? foundHeadings[0].idx : -1;
-    const descriptionEnd = firstHeadingIdx >= 0 ? firstHeadingIdx : Math.min(5, lines.length);
-    const descriptionLines = lines.slice(1, descriptionEnd).filter(line => !/^(?:lieu|ville|contrat|type|poste|expérience|experience)\b/i.test(line));
-    const description = descriptionLines.join(' ');
-
-    // Helper to extract section between a heading and the next heading (or end)
-    const extractSectionByKey = (key: string) => {
-      const heading = foundHeadings.find(h => h.key === key);
-      if (!heading) return [];
-      const start = heading.idx + 1;
-      const following = foundHeadings.find(h => h.idx > heading.idx);
-      const end = following ? following.idx : lines.length;
-      return lines.slice(start, end).map(line => line.replace(/^[•\-►→\*\s]+/, '').trim()).filter(Boolean);
-    };
-
-    const missions = extractSectionByKey('missions');
-    const profile = extractSectionByKey('profile');
-    const competences = extractSectionByKey('competences');
-    const offers = extractSectionByKey('offers');
-
-    // Contact extraction: try to extract email and subject anywhere in text
-    const emailMatch = cleanText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    const contactEmail = emailMatch ? emailMatch[0] : '';
-    const subjectMatch = cleanText.match(/objet\s*(?:du)?\s*(?:mail|email)\s*[:\-]?\s*(.*)/i);
-    const contactSubject = subjectMatch ? subjectMatch[1].trim().split('\n')[0] : '';
-    const linkMatch = cleanText.match(/https?:\/\/\S+/i);
-    const originalLink = linkMatch ? linkMatch[0] : '';
-
-    // If competences were not found as a heading but appear as a comma-separated line in profile, extract them
-    let finalCompetences = competences;
-    let finalProfile = profile;
-    if (finalCompetences.length === 0 && finalProfile.length > 0) {
-      const first = finalProfile[0] || '';
-      if ((first.match(/,/g) || []).length >= 1 && /[a-zA-Z]{2,}/.test(first)) {
-        const extracted = first.split(',').map(s => s.trim()).filter(Boolean);
-        // Heuristic: if there are more than 1 items, treat as competences
-        if (extracted.length > 1) {
-          finalCompetences = extracted.filter(c => !/comp[eé]tence|skill/i.test(c));
-          finalProfile = finalProfile.slice(1);
-        }
-      }
-    }
-
-    return {
-      title,
-      company,
-      city,
-      contractType,
-      description,
-      missionsRaw: missions.join('\n'),
-      profileRaw: finalProfile.join('\n'),
-      competencesRaw: finalCompetences.join(', '),
-      offersRaw: offers.join('\n'),
-      contactEmail,
-      contactSubject,
-      originalLink
-    };
-  };
-
   const handleParseText = () => {
     const raw = linkedInText.trim();
     if (!raw) {
-      setParseNotice('Veuillez coller un texte avant d\'analyser.');
+      setParseNotice({ message: 'Veuillez coller un texte avant d\'analyser.', type: 'warning' });
+      setUndetectedFields([]);
       return;
     }
-    const parsed = parseLinkedInText(raw);
+
+    const parsed = parseJobText(raw);
+    
     setFormData(prev => ({
       ...prev,
       title: parsed.title || prev.title,
       company: parsed.company || prev.company,
       city: parsed.city || prev.city,
+      category: parsed.category || prev.category,
       contractType: parsed.contractType || prev.contractType,
+      experienceLevel: parsed.experienceLevel || prev.experienceLevel,
       description: parsed.description || prev.description,
       missionsRaw: parsed.missionsRaw || prev.missionsRaw,
       profileRaw: parsed.profileRaw || prev.profileRaw,
+      benefitsRaw: parsed.benefitsRaw || prev.benefitsRaw,
       contactEmail: parsed.contactEmail || prev.contactEmail,
       contactSubject: parsed.contactSubject || prev.contactSubject,
       originalLink: parsed.originalLink || prev.originalLink
     }));
-    const parts = [];
-    if (parsed.title) parts.push('Titre détecté');
-    if (parsed.city) parts.push(`Ville: ${parsed.city}`);
-    if (parsed.contractType) parts.push(`Contrat: ${parsed.contractType}`);
-    if (parsed.company) parts.push(`Entreprise: ${parsed.company}`);
-    setParseNotice(parts.length > 0 ? parts.join(' • ') : 'Aucun champ reconnu automatiquement.');
+
+    const detected = [];
+    const missing = [];
+
+    if (parsed.title) detected.push('Titre'); else missing.push('Titre');
+    if (parsed.company) detected.push('Entreprise'); else missing.push('Entreprise');
+    if (parsed.city) detected.push('Ville'); else missing.push('Ville');
+    if (parsed.category) detected.push('Secteur'); else missing.push('Secteur');
+    if (parsed.contractType) detected.push('Contrat'); else missing.push('Contrat');
+    if (parsed.experienceLevel) detected.push('Expérience'); else missing.push('Expérience');
+
+    setUndetectedFields(missing);
+
+    if (detected.length > 0) {
+      setParseNotice({
+        message: `${detected.length} champs détectés automatiquement.`,
+        type: 'success'
+      });
+    } else {
+      setParseNotice({
+        message: 'Aucun champ reconnu automatiquement.',
+        type: 'warning'
+      });
+    }
   };
 
   // ─── Soumission du formulaire ───────────────────────────────────────────────
@@ -279,13 +210,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       title: '', company: '', category: 'RH', city: 'Casablanca',
       contractType: 'CDI', experienceLevel: 'Débutant (0-1 an)',
       contactEmail: '', contactPhone: '', contactSubject: '',
-      salaryRange: '', description: '', missionsRaw: '', profileRaw: '', originalLink: ''
+      salaryRange: '', description: '', missionsRaw: '', profileRaw: '', benefitsRaw: '', originalLink: ''
     });
     setLogoFile(null);
     setLogoPreview(null);
     setDuplicatedLogoUrl(null);
     setLinkedInText('');
-    setParseNotice('');
+    setParseNotice(null);
+    setUndetectedFields([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -321,7 +253,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setLogoFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setLinkedInText('');
-    setParseNotice('');
+    setParseNotice(null);
+    setUndetectedFields([]);
 
     // Basculer vers l'onglet "Ajouter"
     setActiveTab('add');
@@ -369,6 +302,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         description: formData.description,
         missions: missions.length > 0 ? missions : ['Missions définies lors de l\'entretien.'],
         profile: profile.length > 0 ? profile : ['Sérieux, rigueur et motivation.'],
+        benefits: formData.benefitsRaw ? formData.benefitsRaw.split('\n').map(b => b.trim()).filter(Boolean) : [],
         originalLink: formData.originalLink || undefined,
         featured: true,
         isActive: true,
@@ -862,7 +796,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <textarea
                     rows={4}
                     value={linkedInText}
-                    onChange={(e) => { setLinkedInText(e.target.value); setParseNotice(''); }}
+                    onChange={(e) => { setLinkedInText(e.target.value); setParseNotice(null); setUndetectedFields([]); }}
                     placeholder="Exemple : Offre d'emploi : Chargé(e) de recrutement chez ABC Consulting - CDI - Casablanca"
                     className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-sky-500"
                   />
@@ -871,12 +805,33 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <FileText className="w-4 h-4" />
                       Analyser le texte
                     </button>
-                    <button type="button" onClick={() => { setLinkedInText(''); setParseNotice(''); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all">
+                    <button type="button" onClick={() => { setLinkedInText(''); setParseNotice(null); setUndetectedFields([]); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all">
                       <Trash2 className="w-4 h-4" />
                       Effacer
                     </button>
                   </div>
-                  {parseNotice && <p className="text-sm text-emerald-700 font-medium">{parseNotice}</p>}
+                  
+                  {parseNotice && (
+                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${parseNotice.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                      <p className="font-semibold flex items-center gap-2">
+                        {parseNotice.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                        {parseNotice.message}
+                      </p>
+                      
+                      {undetectedFields.length > 0 && (
+                        <div className="text-sm">
+                          <p className="mb-1 font-medium text-amber-700">⚠️ Non détecté — vérifiez ces champs manuellement :</p>
+                          <div className="flex flex-wrap gap-2">
+                            {undetectedFields.map(field => (
+                              <span key={field} className="px-2 py-1 bg-white/60 border border-amber-200 rounded text-xs font-semibold">
+                                {field}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Section: Informations du poste */}
@@ -1027,6 +982,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Profil recherché (un par ligne)</label>
                     <textarea rows={3} value={formData.profileRaw} onChange={(e) => setFormData({ ...formData, profileRaw: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Avantages (un par ligne)</label>
+                    <textarea rows={3} value={formData.benefitsRaw} onChange={(e) => setFormData({ ...formData, benefitsRaw: e.target.value })} placeholder="ex: Mutuelle de santé..." className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                   </div>
 
                   <div>

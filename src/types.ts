@@ -8,6 +8,14 @@ export type JobCategory =
   | 'Informatique' 
   | 'Agriculture'
   | 'Marketing'
+  | 'Commercial'
+  | 'Logistique'
+  | 'Santé'
+  | 'Éducation'
+  | 'BTP'
+  | 'Finance'
+  | 'Hôtellerie'
+  | 'Juridique'
   | 'Autre';
 
 export type MoroccanCity = 
@@ -23,6 +31,18 @@ export type MoroccanCity =
   | 'Kénitra'
   | 'Tétouan'
   | 'Nador'
+  | 'Salé'
+  | 'Mohammedia'
+  | 'Beni Mellal'
+  | 'Settat'
+  | 'Laâyoune'
+  | 'Berrechid'
+  | 'Safi'
+  | 'Essaouira'
+  | 'Errachidia'
+  | 'Taza'
+  | 'Guelmim'
+  | 'Dakhla'
   | 'Autre ville';
 
 export type UserRole = 'candidat' | 'entreprise' | 'admin';
