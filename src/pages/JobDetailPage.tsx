@@ -47,6 +47,8 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
+  const isSaved = Array.isArray(savedJobIds) && job?.id ? savedJobIds.includes(job.id) : false;
+
   // Assembler la description complète avec rétrocompatibilité pour les offres existantes
   const getFullDescription = (): string => {
     let base = cleanDescription(job.description || '', job.company);
