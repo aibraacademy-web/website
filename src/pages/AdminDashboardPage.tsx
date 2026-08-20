@@ -99,9 +99,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     contactSubject: '',
     salaryRange: '',
     description: '',
-    missionsRaw: '',
-    profileRaw: '',
-    benefitsRaw: '',
     originalLink: ''
   });
 
@@ -178,9 +175,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         experienceLevel: parsed.experienceLevel || prev.experienceLevel,
         salaryRange: parsed.salaryRange || prev.salaryRange,
         description: parsed.description || prev.description,
-        missionsRaw: parsed.missionsRaw || prev.missionsRaw,
-        profileRaw: parsed.profileRaw || prev.profileRaw,
-        benefitsRaw: parsed.benefitsRaw || prev.benefitsRaw,
         contactEmail: parsed.contactEmail || prev.contactEmail,
         contactSubject: parsed.contactSubject || prev.contactSubject,
         originalLink: parsed.originalLink || prev.originalLink
@@ -227,7 +221,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       title: '', company: '', category: '' as unknown as JobCategory, city: '' as unknown as MoroccanCity,
       contractType: '' as unknown as ContractType, experienceLevel: '' as unknown as JobOffer['experienceLevel'],
       contactEmail: '', contactPhone: '', contactSubject: '',
-      salaryRange: '', description: '', missionsRaw: '', profileRaw: '', benefitsRaw: '', originalLink: ''
+      salaryRange: '', description: '', originalLink: ''
     });
     setLogoFile(null);
     setLogoPreview(null);
@@ -241,7 +235,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // ─── Duplication d'offre ────────────────────────────────────────────────────
 
   const handleDuplicate = (job: JobOffer) => {
-    // Pré-remplir le formulaire avec les données de l'offre originale
+    // Si l'offre originale possède des champs séparés (offres existantes), les formater dans description
+    let fullDesc = job.description || '';
+    const hasMissionsInDesc = fullDesc.toLowerCase().includes('mission');
+    if (!hasMissionsInDesc) {
+      const extraParts: string[] = [];
+      if (job.missions && job.missions.length > 0) {
+        extraParts.push(`Missions & Responsabilités :\n${job.missions.map(m => `- ${m}`).join('\n')}`);
+      }
+      if (job.profile && job.profile.length > 0) {
+        extraParts.push(`Profil recherché :\n${job.profile.map(p => `- ${p}`).join('\n')}`);
+      }
+      if (job.benefits && job.benefits.length > 0) {
+        extraParts.push(`Avantages & Ce que nous offrons :\n${job.benefits.map(b => `- ${b}`).join('\n')}`);
+      }
+      if (extraParts.length > 0) {
+        fullDesc = fullDesc ? `${fullDesc}\n\n${extraParts.join('\n\n')}` : extraParts.join('\n\n');
+      }
+    }
+
     setFormData({
       title: `${job.title} (copie)`,
       company: job.company,
@@ -253,10 +265,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       contactPhone: job.contactPhone || '',
       contactSubject: job.contactSubject || '',
       salaryRange: job.salaryRange || '',
-      description: job.description,
-      missionsRaw: (job.missions || []).join('\n'),
-      profileRaw: (job.profile || []).join('\n'),
-      benefitsRaw: (job.benefits || []).join('\n'),
+      description: fullDesc,
       originalLink: job.originalLink || ''
     });
 
@@ -296,8 +305,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
       // 2. Préparer les données
       const initials = formData.company.trim() ? formData.company.trim().split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'EC';
-      const missions = formData.missionsRaw.split('\n').map(m => m.trim()).filter(m => m.length > 0);
-      const profile = formData.profileRaw.split('\n').map(p => p.trim()).filter(p => p.length > 0);
 
       // 3. Insérer dans Supabase
       const created = await createJobOffer({
@@ -314,9 +321,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         contactSubject: formData.contactSubject || undefined,
         salaryRange: formData.salaryRange || 'A négocier',
         description: formData.description,
-        missions: missions.length > 0 ? missions : ['Missions définies lors de l\'entretien.'],
-        profile: profile.length > 0 ? profile : ['Sérieux, rigueur et motivation.'],
-        benefits: formData.benefitsRaw ? formData.benefitsRaw.split('\n').map(b => b.trim()).filter(Boolean) : [],
+        missions: [],
+        profile: [],
+        benefits: [],
         originalLink: formData.originalLink || undefined,
         featured: true,
         isActive: true,
@@ -998,27 +1005,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="space-y-4">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <FileText className="w-5 h-5 text-emerald-600" />
-                    3. Description
+                    3. Description complète de l'offre
                   </h2>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
-                    <textarea rows={4} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Missions (une par ligne)</label>
-                    <textarea rows={3} value={formData.missionsRaw} onChange={(e) => setFormData({ ...formData, missionsRaw: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Profil recherché (un par ligne)</label>
-                    <textarea rows={3} value={formData.profileRaw} onChange={(e) => setFormData({ ...formData, profileRaw: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Avantages (un par ligne)</label>
-                    <textarea rows={3} value={formData.benefitsRaw} onChange={(e) => setFormData({ ...formData, benefitsRaw: e.target.value })} placeholder="ex: Mutuelle de santé..." className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Description de l'offre
+                    </label>
+                    <textarea
+                      rows={12}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Décrivez le poste, les missions, le profil recherché et les avantages librement..."
+                      className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 font-sans leading-relaxed whitespace-pre-wrap"
+                    />
                   </div>
 
                   <div>

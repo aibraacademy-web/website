@@ -139,17 +139,13 @@ export interface ParsedJobData {
   experienceLevel?: JobOffer['experienceLevel'];
   salaryRange?: string;
   description: string;
-  missionsRaw: string;
-  profileRaw: string;
-  competencesRaw?: string;
-  benefitsRaw: string;
   contactEmail: string;
   contactSubject: string;
   originalLink: string;
 }
 
 /**
- * Analyse par IA (Gemini) avec séparation stricte des champs
+ * Analyse par IA (Gemini) : extrait les métadonnées et unifie tout le texte dans le champ unique `description`.
  */
 export const parseJobWithGemini = async (rawText: string): Promise<ParsedJobData | null> => {
   const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) ||
@@ -172,10 +168,7 @@ Analyse le texte d'offre d'emploi brut ci-dessous et retourne UNIQUEMENT un obje
   "contractType": "Un type parmi : CDI, CDD, Stage / PFE, Alternance, Intérim",
   "experienceLevel": "Un niveau parmi : Débutant (0-1 an), 1 à 3 ans, 3 à 5 ans, Stage PFE, Tous niveaux",
   "salaryRange": "Fourchette salariale si mentionnée (ex: 6 000 – 8 000 MAD) ou chaîne vide",
-  "description": "Court paragraphe de contexte et résumé du poste, reformulé de manière claire et professionnelle.",
-  "missions": ["Mission 1", "Mission 2"],
-  "profile": ["Critère 1", "Critère 2"],
-  "benefits": ["Avantage 1", "Avantage 2"],
+  "description": "Texte complet structuré et aéré de l'offre (avec sauts de ligne). Doit contenir le paragraphe de contexte du poste (SANS répéter l'entreprise au début), suivi des sections avec titres clairs et tirets (ex:\n\nMissions & Responsabilités :\n- Mission 1\n- Mission 2\n\nProfil recherché :\n- Critère 1\n- Critère 2\n\nAvantages :\n- Avantage 1)",
   "contactEmail": "Adresse email pour postuler si trouvée ou vide",
   "contactPhone": "Numéro de téléphone si trouvé ou vide",
   "contactSubject": "Objet recommandé pour le mail de candidature si mentionné ou vide",
@@ -184,9 +177,8 @@ Analyse le texte d'offre d'emploi brut ci-dessous et retourne UNIQUEMENT un obje
 
 RÈGLES IMPORTANTES ET STRICTES :
 1. Le nom de l'entreprise (company) doit être extrait et stocké UNIQUEMENT dans son propre champ company, jamais mélangé ou dupliqué dans le champ description.
-2. Le champ description doit contenir uniquement le contexte/résumé du poste (reformulé), sans répéter "Entreprise : X" au début.
+2. Le champ description doit être un texte libre unique complet et structuré avec ses propres retours à la ligne (\\n\\n).
 3. N'inclus jamais le nom de l'entreprise au début du champ description, il est déjà extrait séparément dans le champ company.
-4. missions, profile et benefits doivent être des listes de points clés nets, sans puces ni tirets.
 
 Texte brut de l'offre d'emploi :
 """
@@ -220,9 +212,6 @@ ${rawText}
       experienceLevel: json.experienceLevel || undefined,
       salaryRange: json.salaryRange || '',
       description: description,
-      missionsRaw: Array.isArray(json.missions) ? json.missions.join('\n') : (json.missions || ''),
-      profileRaw: Array.isArray(json.profile) ? json.profile.join('\n') : (json.profile || ''),
-      benefitsRaw: Array.isArray(json.benefits) ? json.benefits.join('\n') : (json.benefits || ''),
       contactEmail: json.contactEmail || '',
       contactSubject: json.contactSubject || '',
       originalLink: json.originalLink || ''
@@ -234,7 +223,7 @@ ${rawText}
 };
 
 /**
- * Analyse heuristique / règles regex avec séparation stricte entreprise / description
+ * Analyse heuristique / règles regex : regroupe tout le contenu dans le champ unique `description`.
  */
 export const parseJobTextSync = (rawText: string): ParsedJobData => {
   const cleanText = rawText.replace(/\r/g, '');
@@ -249,7 +238,6 @@ export const parseJobTextSync = (rawText: string): ParsedJobData => {
                        cleanText.match(/cabinet\s*[:\-]\s*([A-Za-zÀ-ÿ0-9&'’\-\s]{1,40})/i);
   
   let company = companyMatch ? companyMatch[1].trim().split('\n')[0] : '';
-  // Retirer les mots clés parasites de l'entreprise
   company = company.replace(/\s+(?:recrute|cherche|basé|situé).*$/i, '').trim();
 
   const city = detectCity(cleanText);
@@ -257,17 +245,17 @@ export const parseJobTextSync = (rawText: string): ParsedJobData => {
   const experienceLevel = detectExperienceLevel(cleanText);
 
   // Définition des séparateurs de sections
-  const headingPatterns: { key: string; pattern: RegExp }[] = [
-    { key: 'missions', pattern: /^(?:m[iî]ssions|🎯|responsabilit[eé]s?|vos missions)/i },
-    { key: 'profile', pattern: /^(?:profil(?: recherch[eé])?|👤|exigences|pr[eé]requis)/i },
-    { key: 'competences', pattern: /^(?:comp[eé]tences?|skills?|aptitudes|savoir-faire)/i },
-    { key: 'offers', pattern: /^(?:ce que nous offrons|nous offrons|avantages|conditions|pourquoi nous rejoindre)/i },
-    { key: 'contact', pattern: /^(?:candidature|contact|📧|email|mail|📩|postuler)/i },
+  const headingPatterns: { key: string; label: string; pattern: RegExp }[] = [
+    { key: 'missions', label: 'Missions & Responsabilités :', pattern: /^(?:m[iî]ssions|🎯|responsabilit[eé]s?|vos missions)/i },
+    { key: 'profile', label: 'Profil recherché :', pattern: /^(?:profil(?: recherch[eé])?|👤|exigences|pr[eé]requis)/i },
+    { key: 'competences', label: 'Compétences requises :', pattern: /^(?:comp[eé]tences?|skills?|aptitudes|savoir-faire)/i },
+    { key: 'offers', label: 'Ce que nous offrons / Avantages :', pattern: /^(?:ce que nous offrons|nous offrons|avantages|conditions|pourquoi nous rejoindre)/i },
+    { key: 'contact', label: 'Contact & Candidature :', pattern: /^(?:candidature|contact|📧|email|mail|📩|postuler)/i },
   ];
 
   // Recherche des indices de titres de sections
-  const foundHeadings: { key: string; idx: number }[] = headingPatterns
-    .map(h => ({ key: h.key, idx: lines.findIndex(l => h.pattern.test(l)) }))
+  const foundHeadings = headingPatterns
+    .map(h => ({ key: h.key, label: h.label, idx: lines.findIndex(l => h.pattern.test(l)) }))
     .filter(h => h.idx >= 0)
     .sort((a, b) => a.idx - b.idx);
 
@@ -275,15 +263,14 @@ export const parseJobTextSync = (rawText: string): ParsedJobData => {
   const firstHeadingIdx = foundHeadings.length > 0 ? foundHeadings[0].idx : -1;
   const descriptionEnd = firstHeadingIdx >= 0 ? firstHeadingIdx : Math.min(5, lines.length);
   
-  // Filtrer les lignes d'entreprise, lieu, contrat dans la description
   const descriptionLines = lines.slice(1, descriptionEnd).filter(line => {
     if (/^(?:lieu|ville|contrat|type|poste|expérience|experience|secteur|salaire)\b/i.test(line)) return false;
     if (/^(?:entreprise|soci[eé]t[eé]|client|employeur|cabinet)\s*[:\-]/i.test(line)) return false;
     return true;
   });
 
-  const rawDescription = descriptionLines.join(' ');
-  const description = cleanDescription(rawDescription, company);
+  const rawIntro = descriptionLines.join(' ');
+  const intro = cleanDescription(rawIntro, company);
 
   const category = detectCategory(title, cleanText);
 
@@ -310,18 +297,28 @@ export const parseJobTextSync = (rawText: string): ParsedJobData => {
   const linkMatch = cleanText.match(/https?:\/\/\S+/i);
   const originalLink = linkMatch ? linkMatch[0] : '';
 
-  let finalCompetences = competences;
-  let finalProfile = profile;
-  if (finalCompetences.length === 0 && finalProfile.length > 0) {
-    const first = finalProfile[0] || '';
-    if ((first.match(/,/g) || []).length >= 1 && /[a-zA-Z]{2,}/.test(first)) {
-      const extracted = first.split(',').map(s => s.trim()).filter(Boolean);
-      if (extracted.length > 1) {
-        finalCompetences = extracted.filter(c => !/comp[eé]tence|skill/i.test(c));
-        finalProfile = finalProfile.slice(1);
-      }
-    }
+  // Construction du texte unique structuré
+  const textSections: string[] = [];
+  if (intro) {
+    textSections.push(intro);
   }
+  if (missions.length > 0) {
+    textSections.push(`Missions & Responsabilités :\n${missions.map(m => `- ${m}`).join('\n')}`);
+  }
+  if (profile.length > 0) {
+    textSections.push(`Profil recherché :\n${profile.map(p => `- ${p}`).join('\n')}`);
+  }
+  if (competences.length > 0) {
+    textSections.push(`Compétences requises :\n${competences.map(c => `- ${c}`).join('\n')}`);
+  }
+  if (offers.length > 0) {
+    textSections.push(`Avantages & Ce que nous offrons :\n${offers.map(o => `- ${o}`).join('\n')}`);
+  }
+
+  // Fallback si aucune section spécifique n'a été détectée mais qu'il y a du texte
+  const finalDescription = textSections.length > 0 
+    ? textSections.join('\n\n')
+    : lines.slice(1).join('\n');
 
   return {
     title,
@@ -330,11 +327,7 @@ export const parseJobTextSync = (rawText: string): ParsedJobData => {
     contractType,
     category,
     experienceLevel,
-    description,
-    missionsRaw: missions.join('\n'),
-    profileRaw: finalProfile.join('\n'),
-    competencesRaw: finalCompetences.join(', '),
-    benefitsRaw: offers.join('\n'),
+    description: finalDescription,
     contactEmail,
     contactSubject,
     originalLink
@@ -351,4 +344,5 @@ export const parseJobText = async (rawText: string): Promise<ParsedJobData> => {
   }
   return parseJobTextSync(rawText);
 };
+
 

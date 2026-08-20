@@ -47,33 +47,34 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
-  const isSaved = savedJobIds.includes(job.id);
-
-  // Nettoyer la description pour ne jamais répéter le nom de l'entreprise au début
-  const displayDescription = cleanDescription(job.description || '', job.company);
-
-  // Extract skills/competences from profile
-  const extractCompetences = () => {
-    if (!job.profile || job.profile.length === 0) return { competences: [], profile: [] };
+  // Assembler la description complète avec rétrocompatibilité pour les offres existantes
+  const getFullDescription = (): string => {
+    let base = cleanDescription(job.description || '', job.company);
     
-    let competences: string[] = [];
-    let profileFiltered = [...job.profile];
+    // Si l'offre ancienne a déjà des champs missions / profil séparés et qu'ils ne sont pas déjà inclus dans description
+    const hasMissionsInDesc = base.toLowerCase().includes('mission');
+    const parts: string[] = [];
     
-    const firstItem = job.profile[0]?.toLowerCase() || '';
-    if (firstItem.includes('compétence') || firstItem.includes('skill') || (firstItem.match(/,/g) || []).length > 1) {
-      const competenceLine = job.profile[0];
-      competences = competenceLine
-        .split(',')
-        .map(c => c.trim())
-        .filter(c => c.length > 0 && !c.toLowerCase().includes('compétence') && !c.toLowerCase().includes('skill'));
-      profileFiltered = job.profile.slice(1);
+    if (base) {
+      parts.push(base);
     }
     
-    return { competences, profile: profileFiltered };
+    if (!hasMissionsInDesc) {
+      if (job.missions && job.missions.length > 0) {
+        parts.push(`Missions & Responsabilités :\n${job.missions.map(m => `• ${m}`).join('\n')}`);
+      }
+      if (job.profile && job.profile.length > 0) {
+        parts.push(`Profil recherché :\n${job.profile.map(p => `• ${p}`).join('\n')}`);
+      }
+      if (job.benefits && job.benefits.length > 0) {
+        parts.push(`Avantages & Ce que nous offrons :\n${job.benefits.map(b => `• ${b}`).join('\n')}`);
+      }
+    }
+    
+    return parts.join('\n\n').trim();
   };
 
-  const { competences, profile: filteredProfile } = extractCompetences();
-  const benefits = job.benefits || [];
+  const fullDescriptionText = getFullDescription();
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/offres/${job.id}`);
@@ -303,9 +304,9 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
               </div>
 
               {/* ──────────────────────────────────────────────────────────── */}
-              {/* BLOC 3: Détails de l'annonce (Texte structuré)               */}
+              {/* BLOC 3: Détails de l'annonce (Texte complet structuré)       */}
               {/* ──────────────────────────────────────────────────────────── */}
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-6">
+              <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <FileText className="w-5 h-5 text-emerald-600" />
                   <h2 className="text-base font-extrabold text-slate-900 font-serif">
@@ -313,89 +314,14 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                   </h2>
                 </div>
 
-                {/* Paragraphe de contexte / Description (reformulé sans répéter le nom de l'entreprise) */}
-                {displayDescription && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Description du poste
-                    </h3>
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                      {displayDescription}
-                    </div>
+                {fullDescriptionText ? (
+                  <div className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-line font-sans">
+                    {fullDescriptionText}
                   </div>
-                )}
-
-                {/* Missions & Responsabilités */}
-                {job.missions && job.missions.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-600" />
-                      Missions & Responsabilités
-                    </h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      {job.missions.map((mission, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{mission}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Profil recherché */}
-                {filteredProfile && filteredProfile.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-600" />
-                      Profil recherché
-                    </h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      {filteredProfile.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Compétences requises (si présentes) */}
-                {competences.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Compétences requises
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {competences.map((skill, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 inline-block"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Avantages & Ce que nous offrons */}
-                {benefits.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-600" />
-                      Ce que nous offrons
-                    </h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      {benefits.map((benefit, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">
+                    Aucune description détaillée fournie pour cette offre.
+                  </p>
                 )}
               </div>
 
