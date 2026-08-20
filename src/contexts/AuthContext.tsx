@@ -38,8 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadUserData = async (currentSession: Session | null) => {
-    setIsLoading(true);
+  const fetchProfileData = async (currentSession: Session | null) => {
     setSession(currentSession);
     setUser(currentSession?.user || null);
 
@@ -64,12 +63,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCandidate(null);
       setCompany(null);
     }
-    setIsLoading(false);
   };
 
   const refreshProfile = async () => {
     const { data } = await supabase.auth.getSession();
-    await loadUserData(data.session);
+    await fetchProfileData(data.session);
   };
 
   const signOut = async () => {
@@ -83,13 +81,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let initialLoadDone = false;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) loadUserData(session);
+    // 1. Chargement initial de la session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (mounted) {
+        try {
+          await fetchProfileData(session);
+        } finally {
+          if (mounted) {
+            initialLoadDone = true;
+            setIsLoading(false);
+          }
+        }
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) loadUserData(session);
+    // 2. Écouteur de changement d'état d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted) return;
+
+      // Lors du rafraîchissement automatique de token (ex: retour sur l'onglet),
+      // mise à jour silencieuse en mémoire sans déclencher de spinner / démontage
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setCandidate(null);
+        setCompany(null);
+        return;
+      }
+
+      // Pour les autres événements (SIGNED_IN, USER_UPDATED, etc.)
+      if (!initialLoadDone) {
+        setIsLoading(true);
+      }
+
+      try {
+        await fetchProfileData(newSession);
+      } finally {
+        if (mounted && !initialLoadDone) {
+          initialLoadDone = true;
+          setIsLoading(false);
+        }
+      }
     });
 
     return () => {
