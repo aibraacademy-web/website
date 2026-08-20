@@ -64,6 +64,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // LinkedIn paste parser
   const [linkedInText, setLinkedInText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
   const [parseNotice, setParseNotice] = useState<{ message: string, type: 'success' | 'warning' } | null>(null);
   const [undetectedFields, setUndetectedFields] = useState<string[]>([]);
 
@@ -154,7 +155,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // ─── LinkedIn parser ────────────────────────────────────────────────────────
 
-  const handleParseText = () => {
+  const handleParseText = async () => {
     const raw = linkedInText.trim();
     if (!raw) {
       setParseNotice({ message: 'Veuillez coller un texte avant d\'analyser.', type: 'warning' });
@@ -162,47 +163,60 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       return;
     }
 
-    const parsed = parseJobText(raw);
-    
-    setFormData(prev => ({
-      ...prev,
-      title: parsed.title || prev.title,
-      company: parsed.company || prev.company,
-      city: parsed.city || prev.city,
-      category: parsed.category || prev.category,
-      contractType: parsed.contractType || prev.contractType,
-      experienceLevel: parsed.experienceLevel || prev.experienceLevel,
-      description: parsed.description || prev.description,
-      missionsRaw: parsed.missionsRaw || prev.missionsRaw,
-      profileRaw: parsed.profileRaw || prev.profileRaw,
-      benefitsRaw: parsed.benefitsRaw || prev.benefitsRaw,
-      contactEmail: parsed.contactEmail || prev.contactEmail,
-      contactSubject: parsed.contactSubject || prev.contactSubject,
-      originalLink: parsed.originalLink || prev.originalLink
-    }));
+    setIsParsing(true);
+    setParseNotice(null);
+    try {
+      const parsed = await parseJobText(raw);
+      
+      setFormData(prev => ({
+        ...prev,
+        title: parsed.title || prev.title,
+        company: parsed.company || prev.company,
+        city: parsed.city || prev.city,
+        category: parsed.category || prev.category,
+        contractType: parsed.contractType || prev.contractType,
+        experienceLevel: parsed.experienceLevel || prev.experienceLevel,
+        salaryRange: parsed.salaryRange || prev.salaryRange,
+        description: parsed.description || prev.description,
+        missionsRaw: parsed.missionsRaw || prev.missionsRaw,
+        profileRaw: parsed.profileRaw || prev.profileRaw,
+        benefitsRaw: parsed.benefitsRaw || prev.benefitsRaw,
+        contactEmail: parsed.contactEmail || prev.contactEmail,
+        contactSubject: parsed.contactSubject || prev.contactSubject,
+        originalLink: parsed.originalLink || prev.originalLink
+      }));
 
-    const detected = [];
-    const missing = [];
+      const detected = [];
+      const missing = [];
 
-    if (parsed.title) detected.push('Titre'); else missing.push('Titre');
-    if (parsed.company) detected.push('Entreprise');
-    if (parsed.city) detected.push('Ville');
-    if (parsed.category) detected.push('Secteur');
-    if (parsed.contractType) detected.push('Contrat');
-    if (parsed.experienceLevel) detected.push('Expérience');
+      if (parsed.title) detected.push('Titre'); else missing.push('Titre');
+      if (parsed.company) detected.push('Entreprise');
+      if (parsed.city) detected.push('Ville');
+      if (parsed.category) detected.push('Secteur');
+      if (parsed.contractType) detected.push('Contrat');
+      if (parsed.experienceLevel) detected.push('Expérience');
 
-    setUndetectedFields(missing);
+      setUndetectedFields(missing);
 
-    if (detected.length > 0) {
+      if (detected.length > 0) {
+        setParseNotice({
+          message: `${detected.length} champs détectés automatiquement.`,
+          type: 'success'
+        });
+      } else {
+        setParseNotice({
+          message: 'Aucun champ reconnu automatiquement.',
+          type: 'warning'
+        });
+      }
+    } catch (err) {
+      console.error('Erreur analyse texte:', err);
       setParseNotice({
-        message: `${detected.length} champs détectés automatiquement.`,
-        type: 'success'
-      });
-    } else {
-      setParseNotice({
-        message: 'Aucun champ reconnu automatiquement.',
+        message: 'Erreur lors de l\'analyse du texte.',
         type: 'warning'
       });
+    } finally {
+      setIsParsing(false);
     }
   };
 
@@ -801,11 +815,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-sky-500"
                   />
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <button type="button" onClick={handleParseText} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-3 text-sm font-semibold hover:bg-slate-800 transition-all">
-                      <FileText className="w-4 h-4" />
-                      Analyser le texte
+                    <button
+                      type="button"
+                      onClick={handleParseText}
+                      disabled={isParsing}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-3 text-sm font-semibold hover:bg-slate-800 disabled:opacity-60 transition-all"
+                    >
+                      {isParsing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Analyse en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          <span>Analyser le texte</span>
+                        </>
+                      )}
                     </button>
-                    <button type="button" onClick={() => { setLinkedInText(''); setParseNotice(null); setUndetectedFields([]); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all">
+                    <button type="button" disabled={isParsing} onClick={() => { setLinkedInText(''); setParseNotice(null); setUndetectedFields([]); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 transition-all">
                       <Trash2 className="w-4 h-4" />
                       Effacer
                     </button>
