@@ -20,10 +20,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
     try {
       const trimmedEmail = email.trim();
       const trimmedPassword = password.trim();
-      console.log('--- DIAGNOSTIC SUPABASE AUTH ---');
-      console.log('Email soumis :', `"${trimmedEmail}"`);
-      console.log('Mot de passe soumis :', `"${trimmedPassword}"`);
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,

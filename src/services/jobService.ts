@@ -212,11 +212,11 @@ export const filterJobs = (jobs: JobOffer[], filters: JobFilterState): JobOffer[
       const raw = filters.keyword.toLowerCase().trim();
       const terms = raw.includes('|') ? raw.split('|').map(t => t.trim()).filter(Boolean) : [raw];
       const haystack = [
-        job.title,
-        job.company,
-        job.city,
-        job.category,
-        job.description,
+        job.title || '',
+        job.company || '',
+        job.city || '',
+        job.category || '',
+        job.description || '',
         ...(job.missions || []),
         ...(job.profile || [])
       ].join(' ').toLowerCase();
@@ -227,19 +227,19 @@ export const filterJobs = (jobs: JobOffer[], filters: JobFilterState): JobOffer[
     }
 
     if (filters.category && filters.category !== 'TOUS') {
-      if (job.category.toLowerCase() !== filters.category.toLowerCase()) return false;
+      if ((job.category || '').toLowerCase() !== filters.category.toLowerCase()) return false;
     }
 
     if (filters.city && filters.city !== 'TOUTES') {
-      if (job.city.toLowerCase() !== filters.city.toLowerCase()) return false;
+      if ((job.city || '').toLowerCase() !== filters.city.toLowerCase()) return false;
     }
 
     if (filters.contractType && filters.contractType !== 'TOUS') {
-      if (job.contractType.toLowerCase() !== filters.contractType.toLowerCase()) return false;
+      if ((job.contractType || '').toLowerCase() !== filters.contractType.toLowerCase()) return false;
     }
 
     if (filters.experienceLevel && filters.experienceLevel !== 'TOUS') {
-      if (job.experienceLevel !== filters.experienceLevel) return false;
+      if ((job.experienceLevel || '') !== filters.experienceLevel) return false;
     }
 
     return true;

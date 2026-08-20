@@ -225,9 +225,9 @@ CREATE POLICY "Published jobs are viewable by anyone" ON public.job_offers FOR S
 DROP POLICY IF EXISTS "Companies can insert their own jobs" ON public.job_offers;
 CREATE POLICY "Companies can insert their own jobs" ON public.job_offers FOR INSERT WITH CHECK (
   auth.role() = 'authenticated' AND (
-    company_id = auth.uid() OR 
-    company_id IS NULL OR 
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('entreprise', 'admin'))
+    company_id = auth.uid() OR
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') OR
+    (company_id IS NULL AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('entreprise', 'admin')))
   )
 );
 

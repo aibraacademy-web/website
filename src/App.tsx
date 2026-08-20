@@ -322,6 +322,8 @@ export default function App() {
               onNavigate={handleNavigate}
               savedJobIds={savedJobIds}
               onToggleSaveJob={handleToggleSave}
+              onOpenMailModal={handleOpenMailModal}
+              onSelectJob={handleSelectJob}
             />
           </AuthGuard>
         )}

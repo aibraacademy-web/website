@@ -14,6 +14,7 @@ interface AuthContextType {
   company: Company | null;
   isLoading: boolean;
   refreshProfile: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   company: null,
   isLoading: true,
   refreshProfile: async () => {},
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -70,6 +72,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await loadUserData(data.session);
   };
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setCandidate(null);
+    setCompany(null);
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -88,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, candidate, company, isLoading, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, candidate, company, isLoading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

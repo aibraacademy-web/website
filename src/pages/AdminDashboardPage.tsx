@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { JobOffer, JobCategory, MoroccanCity, ContractType, Company } from '../types';
+import { StatusBadge } from '../components/StatusBadge';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
 import { fetchAllCompanies, updateCompanyVerificationStatus } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
@@ -185,10 +186,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
     if (parsed.title) detected.push('Titre'); else missing.push('Titre');
     if (parsed.company) detected.push('Entreprise');
-    if (parsed.city) detected.push('Ville'); else missing.push('Ville');
-    if (parsed.category) detected.push('Secteur'); else missing.push('Secteur');
-    if (parsed.contractType) detected.push('Contrat'); else missing.push('Contrat');
-    if (parsed.experienceLevel) detected.push('Expérience'); else missing.push('Expérience');
+    if (parsed.city) detected.push('Ville');
+    if (parsed.category) detected.push('Secteur');
+    if (parsed.contractType) detected.push('Contrat');
+    if (parsed.experienceLevel) detected.push('Expérience');
 
     setUndetectedFields(missing);
 
@@ -241,6 +242,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       description: job.description,
       missionsRaw: (job.missions || []).join('\n'),
       profileRaw: (job.profile || []).join('\n'),
+      benefitsRaw: (job.benefits || []).join('\n'),
       originalLink: job.originalLink || ''
     });
 
@@ -267,10 +269,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.contactEmail || !formData.description) {
-      alert('Veuillez remplir tous les champs obligatoires.');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -893,18 +891,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Titre du poste *</label>
-                      <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Titre du poste</label>
+                      <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nom de l'entreprise *</label>
-                      <input type="text" required value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nom de l'entreprise</label>
+                      <input type="text" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Email de candidature *</label>
-                      <input type="email" required value={formData.contactEmail} onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Email de candidature</label>
+                      <input type="email" value={formData.contactEmail} onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                     </div>
 
                     <div>
@@ -930,32 +928,32 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Secteur *</label>
-                      <select required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value as JobCategory })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Secteur</label>
+                      <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value as JobCategory })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
                         <option value="" disabled>Sélectionner un secteur</option>
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Ville *</label>
-                      <select required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value as MoroccanCity })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Ville</label>
+                      <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value as MoroccanCity })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
                         <option value="" disabled>Sélectionner une ville</option>
                         {cities.map(city => <option key={city} value={city}>{city}</option>)}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contrat *</label>
-                      <select required value={formData.contractType} onChange={(e) => setFormData({ ...formData, contractType: e.target.value as ContractType })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contrat</label>
+                      <select value={formData.contractType} onChange={(e) => setFormData({ ...formData, contractType: e.target.value as ContractType })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
                         <option value="" disabled>Sélectionner un contrat</option>
                         {contractTypes.map(ct => <option key={ct} value={ct}>{ct}</option>)}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Expérience *</label>
-                      <select required value={formData.experienceLevel} onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value as JobOffer['experienceLevel'] })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Expérience</label>
+                      <select value={formData.experienceLevel} onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value as JobOffer['experienceLevel'] })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
                         <option value="" disabled>Sélectionner un niveau</option>
                         {experienceLevels.map(exp => <option key={exp} value={exp}>{exp}</option>)}
                       </select>
@@ -976,8 +974,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </h2>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Description *</label>
-                    <textarea required rows={4} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <textarea rows={4} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                   </div>
 
                   <div>

@@ -343,61 +343,71 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
             {/* Right Recruiter Box */}
             <div className="lg:col-span-1 space-y-6">
               
-              {/* Primary Application Box */}
-              <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-indigo-950 text-white space-y-5 shadow-lg border border-slate-800">
-                
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800">
-                    Postuler maintenant
-                  </span>
-                  <h3 className="text-lg font-bold font-serif text-white mt-2">
-                    Envoyer votre candidature
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Directement par email au service recrutement d'Aibra Academy.
-                  </p>
-                </div>
-
-                {/* Email Box */}
-                <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2">
-                  <p className="text-[11px] font-semibold text-slate-400">Email de contact :</p>
-                  <p className="text-sm font-bold text-emerald-300 font-mono break-all">
-                    {job.contactEmail}
-                  </p>
+              {job.contactEmail ? (
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-indigo-950 text-white space-y-5 shadow-lg border border-slate-800">
                   
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800">
+                      Postuler maintenant
+                    </span>
+                    <h3 className="text-lg font-bold font-serif text-white mt-2">
+                      Envoyer votre candidature
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Directement par email au service recrutement d'Aibra Academy.
+                    </p>
+                  </div>
+
+                  {/* Email Box */}
+                  <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2">
+                    <p className="text-[11px] font-semibold text-slate-400">Email de contact :</p>
+                    <p className="text-sm font-bold text-emerald-300 font-mono break-all">
+                      {job.contactEmail}
+                    </p>
+                    
+                    <button
+                      onClick={handleCopyEmail}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition-all"
+                    >
+                      {copiedEmail ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Adresse email copiée !</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Copier l'adresse email</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Primary CTA */}
                   <button
-                    onClick={handleCopyEmail}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition-all"
+                    onClick={() => onOpenMailModal(job)}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm shadow-md transition-all active:scale-98"
                   >
-                    {copiedEmail ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Adresse email copiée !</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Copier l'adresse email</span>
-                      </>
-                    )}
+                    <Send className="w-4 h-4" />
+                    <span>Envoyer ma candidature</span>
                   </button>
+
+                  <div className="pt-2 text-[11px] text-slate-400 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Gratuit sans frais de dossier pour les étudiants & diplômés</span>
+                  </div>
+
                 </div>
-
-                {/* Primary CTA */}
-                <button
-                  onClick={() => onOpenMailModal(job)}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 px-4 rounded-xl text-sm shadow-md transition-all active:scale-98"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Envoyer ma candidature</span>
-                </button>
-
-                <div className="pt-2 text-[11px] text-slate-400 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Gratuit sans frais de dossier pour les étudiants & diplômés</span>
+              ) : (
+                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 text-center shadow-sm">
+                  <h3 className="text-base font-bold mb-2">Comment postuler ?</h3>
+                  <p className="text-sm leading-relaxed">
+                    {job.originalLink 
+                      ? "Veuillez consulter le lien vers l'annonce officielle ci-contre pour postuler." 
+                      : "Les modalités de candidature ne sont pas communiquées par l'entreprise."}
+                  </p>
                 </div>
-
-              </div>
+              )}
 
               {/* Share Box */}
               <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3">
@@ -414,7 +424,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                   </button>
 
                   <button
-                    onClick={handleWhatsAppShare}
+                    onClick={handleShare}
                     className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 text-xs font-semibold"
                   >
                     <Share2 className="w-3.5 h-3.5" />

@@ -11,12 +11,16 @@ interface CandidateDashboardPageProps {
   onNavigate: (tab: string) => void;
   savedJobIds: string[];
   onToggleSaveJob: (id: string) => void;
+  onOpenMailModal: (job: JobOffer) => void;
+  onSelectJob: (job: JobOffer) => void;
 }
 
 export const CandidateDashboardPage: React.FC<CandidateDashboardPageProps> = ({ 
   onNavigate, 
   savedJobIds, 
-  onToggleSaveJob 
+  onToggleSaveJob,
+  onOpenMailModal,
+  onSelectJob
 }) => {
   const { user, candidate, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'recommended' | 'all'>('recommended');
@@ -262,6 +266,8 @@ export const CandidateDashboardPage: React.FC<CandidateDashboardPageProps> = ({
                         job={job}
                         isSaved={savedJobIds.includes(job.id)}
                         onToggleSave={() => onToggleSaveJob(job.id)}
+                        onOpenMailModal={onOpenMailModal}
+                        onSelectJob={onSelectJob}
                       />
                     ))
                   ) : (
