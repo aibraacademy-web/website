@@ -114,15 +114,38 @@ export const HomePage: React.FC<HomePageProps> = ({
         }}
       />
 
-      {/* 5. Catégories spécialisées (couleurs uniformisées : vert émeraude/slate) */}
+      {/* 5. Catégories spécialisées — toujours visibles, désactivées si 0 offre */}
       {(() => {
         const countGrandesEcoles = jobs.filter(j => j.specialCategory === 'Concours & Grandes Écoles' && j.isActive && j.status === 'approved').length;
         const countRetail = jobs.filter(j => j.specialCategory === 'Grande Distribution & Retail' && j.isActive && j.status === 'approved').length;
         const countFonctionPublique = jobs.filter(j => j.specialCategory === 'Fonction Publique' && j.isActive && j.status === 'approved').length;
-        
-        const hasAnySpecialCategory = countGrandesEcoles > 0 || countRetail > 0 || countFonctionPublique > 0;
 
-        if (!hasAnySpecialCategory) return null;
+        const cards = [
+          {
+            key: 'grandes-ecoles',
+            count: countGrandesEcoles,
+            label: 'Concours & Grandes Écoles',
+            description: 'Offres liées aux concours d\'entrée et grandes écoles marocaines (ENCG, ENSA, EST, écoles d\'ingénieurs...)',
+            icon: <BookOpen className="w-5 h-5 text-emerald-400" />,
+            category: 'Concours & Grandes Écoles' as const,
+          },
+          {
+            key: 'retail',
+            count: countRetail,
+            label: 'Grande Distribution & Retail',
+            description: 'Offres d\'emploi dans les grandes surfaces et enseignes de distribution (Marjane, Carrefour, Aswak Assalam...)',
+            icon: <ShoppingCart className="w-5 h-5 text-emerald-400" />,
+            category: 'Grande Distribution & Retail' as const,
+          },
+          {
+            key: 'fonction-publique',
+            count: countFonctionPublique,
+            label: 'Fonction Publique & Concours d\'État',
+            description: 'Offres et concours du secteur public : Police, Gendarmerie, Collectivités territoriales (Jamaa/Commune), administrations...',
+            icon: <Landmark className="w-5 h-5 text-emerald-400" />,
+            category: 'Fonction Publique' as const,
+          },
+        ];
 
         return (
           <section className="py-12 sm:py-16 bg-slate-900 border-b border-slate-800">
@@ -138,101 +161,66 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {cards.map(({ key, count, label, description, icon, category }) => {
+                  const isEmpty = count === 0;
+                  return (
+                    <div
+                      key={key}
+                      onClick={isEmpty ? undefined : () => onNavigate('jobs', undefined, undefined, category)}
+                      className={[
+                        'group bg-slate-800 p-6 rounded-xl border transition-all duration-200 flex flex-col justify-between',
+                        isEmpty
+                          ? 'border-slate-700/50 opacity-60 cursor-default'
+                          : 'border-slate-700 cursor-pointer hover:border-emerald-500 hover:bg-slate-800/80',
+                      ].join(' ')}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className={[
+                            'w-10 h-10 rounded-lg border flex items-center justify-center transition-colors',
+                            isEmpty
+                              ? 'bg-slate-700/40 border-slate-600/30'
+                              : 'bg-emerald-50/10 border-emerald-500/20 group-hover:bg-emerald-500/20',
+                          ].join(' ')}>
+                            {icon}
+                          </div>
 
-                {/* Card 1: Concours & Grandes Écoles */}
-                {countGrandesEcoles > 0 && (
-                  <div
-                    onClick={() => {
-                      onNavigate('jobs', undefined, undefined, 'Concours & Grandes Écoles');
-                    }}
-                    className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                          <BookOpen className="w-5 h-5 text-emerald-400" />
+                          {isEmpty ? (
+                            <span className="text-[11px] font-semibold text-slate-400 bg-slate-700/60 px-2.5 py-0.5 rounded-full border border-slate-600/40">
+                              Bientôt disponible
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              {count} offre{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          {countGrandesEcoles} offre{countGrandesEcoles > 1 ? 's' : ''} disponible{countGrandesEcoles > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
-                        Concours & Grandes Écoles
-                      </h3>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Offres liées aux concours d'entrée et grandes écoles marocaines (ENCG, ENSA, EST, écoles d'ingénieurs...)
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
-                      <span>Explorer les offres</span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                )}
 
-                {/* Card 2: Grande Distribution & Retail */}
-                {countRetail > 0 && (
-                  <div
-                    onClick={() => {
-                      onNavigate('jobs', undefined, undefined, 'Grande Distribution & Retail');
-                    }}
-                    className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                          <ShoppingCart className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          {countRetail} offre{countRetail > 1 ? 's' : ''} disponible{countRetail > 1 ? 's' : ''}
-                        </span>
+                        <h3 className={[
+                          'text-base font-semibold mb-1 transition-colors',
+                          isEmpty ? 'text-slate-400' : 'text-white group-hover:text-emerald-400',
+                        ].join(' ')}>
+                          {label}
+                        </h3>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          {description}
+                        </p>
                       </div>
-                      <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
-                        Grande Distribution & Retail
-                      </h3>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Offres d'emploi dans les grandes surfaces et enseignes de distribution (Marjane, Carrefour, Aswak Assalam...)
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
-                      <span>Explorer les offres</span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                )}
 
-                {/* Card 3: Fonction Publique & Concours d'État */}
-                {countFonctionPublique > 0 && (
-                  <div
-                    onClick={() => {
-                      onNavigate('jobs', undefined, undefined, 'Fonction Publique');
-                    }}
-                    className="group cursor-pointer bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-emerald-500 hover:bg-slate-800/80 transition-all duration-200 flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-50/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                          <Landmark className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          {countFonctionPublique} offre{countFonctionPublique > 1 ? 's' : ''} disponible{countFonctionPublique > 1 ? 's' : ''}
-                        </span>
+                      <div className={[
+                        'pt-4 border-t flex items-center justify-between text-xs font-semibold mt-4',
+                        isEmpty
+                          ? 'border-slate-700/30 text-slate-600 pointer-events-none'
+                          : 'border-slate-700/60 text-emerald-500 group-hover:text-emerald-400',
+                      ].join(' ')}>
+                        <span>Explorer les offres</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
-                      <h3 className="text-base font-semibold text-white group-hover:text-emerald-400 transition-colors mb-1">
-                        Fonction Publique & Concours d'État
-                      </h3>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Offres et concours du secteur public : Police, Gendarmerie, Collectivités territoriales (Jamaa/Commune), administrations...
-                      </p>
                     </div>
-                    <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 mt-4">
-                      <span>Explorer les offres</span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                )}
-
+                  );
+                })}
               </div>
+
             </div>
           </section>
         );
