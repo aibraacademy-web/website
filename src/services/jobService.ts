@@ -135,6 +135,7 @@ export const updateJobOffer = async (id: string, fields: Partial<JobOffer>): Pro
   if (fields.companyId !== undefined)      dbFields.company_id = fields.companyId ?? null;
   if (fields.domaine !== undefined)        dbFields.domaine = fields.domaine ?? null;
   if (fields.status !== undefined)         dbFields.status = fields.status;
+  if (fields.specialCategory !== undefined) dbFields.special_category = fields.specialCategory ?? null;
 
   const { error } = await supabase.from(TABLE).update(dbFields).eq('id', id);
 
@@ -240,6 +241,10 @@ export const filterJobs = (jobs: JobOffer[], filters: JobFilterState): JobOffer[
 
     if (filters.experienceLevel && filters.experienceLevel !== 'TOUS') {
       if ((job.experienceLevel || '') !== filters.experienceLevel) return false;
+    }
+
+    if (filters.specialCategory) {
+      if ((job.specialCategory || '').toLowerCase() !== filters.specialCategory.toLowerCase()) return false;
     }
 
     return true;

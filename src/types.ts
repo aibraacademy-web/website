@@ -127,6 +127,8 @@ export interface Company extends Profile {
   email?: string;
 }
 
+export type SpecialCategory = 'Concours & Grandes Écoles' | 'Grande Distribution & Retail' | 'Fonction Publique';
+
 export interface JobOffer {
   id: string;
   title: string;
@@ -156,6 +158,7 @@ export interface JobOffer {
   companyId?: string;
   domaine?: string;
   status: JobStatus;
+  specialCategory?: SpecialCategory;
 }
 
 export interface JobFilterState {
@@ -165,6 +168,7 @@ export interface JobFilterState {
   contractType: string;
   experienceLevel: string;
   sortBy: 'latest' | 'popular';
+  specialCategory?: string;
 }
 
 export interface StatisticsData {
@@ -239,6 +243,7 @@ export interface DbJobOffer {
   company_id: string | null;
   domaine: string | null;
   status: string;
+  special_category: string | null;
   companies?: {
     verification_status?: string;
   } | {
@@ -298,6 +303,7 @@ export const dbToJobOffer = (row: DbJobOffer): JobOffer => {
     companyId: row.company_id ?? undefined,
     domaine: row.domaine ?? undefined,
     status: (row.status as JobStatus) || 'approved',
+    specialCategory: (row.special_category as JobOffer['specialCategory']) ?? undefined,
   };
 };
 
@@ -327,4 +333,5 @@ export const jobOfferToDb = (
   company_id: job.companyId ?? null,
   domaine: job.domaine ?? null,
   status: job.status,
+  special_category: job.specialCategory ?? null,
 });

@@ -37,8 +37,15 @@ export default function App() {
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   
   // Auth from context
-  const { session, profile, isLoading: isAuthLoading } = useAuth();
+  const { session, profile, isLoading: isAuthLoading, signOut } = useAuth();
   const isAdminAuthenticated = !!session && profile?.role === 'admin';
+
+  // Force signout if non-admin tries to access admin login/dashboard
+  useEffect(() => {
+    if (session && profile && profile.role !== 'admin' && (currentTab === 'admin-login' || currentTab === 'admin-dashboard')) {
+      signOut();
+    }
+  }, [session, profile, currentTab, signOut]);
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [routeJobId, setRouteJobId] = useState<string | null>(null);
@@ -64,6 +71,10 @@ export default function App() {
     if (cleanPath === 'offres' || cleanPath === 'jobs') {
       return { tab: 'jobs' };
     }
+    if (cleanPath.startsWith('entreprises/')) {
+      const [, slug] = cleanPath.split('/');
+      return { tab: 'company-detail', slug };
+    }
     if (cleanPath.startsWith('about')) {
       return { tab: 'about' };
     }
@@ -88,9 +99,10 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isAdminAuthenticated]);
 
-  const getPathFromTab = (tab: string, jobId?: string) => {
+  const getPathFromTab = (tab: string, jobId?: string, slug?: string) => {
     if (tab === 'jobs') return '/offres';
     if (tab === 'job-detail' && jobId) return `/offres/${jobId}`;
+    if (tab === 'company-detail' && slug) return `/entreprises/${slug}`;
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
@@ -108,7 +120,8 @@ export default function App() {
     city: 'TOUTES',
     contractType: 'TOUS',
     experienceLevel: 'TOUS',
-    sortBy: 'latest'
+    sortBy: 'latest',
+    specialCategory: ''
   });
 
   // Charge les offres publiques depuis Supabase
@@ -164,18 +177,26 @@ export default function App() {
   };
 
   // Navigation helper
-  const handleNavigate = (tab: string, category?: string, city?: string) => {
-    if (category || city) {
-      setJobFilters(prev => ({
-        ...prev,
-        category: category || prev.category,
-        city: city || prev.city
-      }));
-    }
-
+  const handleNavigate = (tab: string, category?: string, city?: string, specialCategory?: string) => {
     if (tab === 'jobs') {
       setRouteJobId(null);
       setSelectedJob(null);
+      setJobFilters({
+        keyword: '',
+        category: category || 'TOUS',
+        city: city || 'TOUTES',
+        contractType: 'TOUS',
+        experienceLevel: 'TOUS',
+        sortBy: 'latest',
+        specialCategory: specialCategory || ''
+      });
+    } else if (category || city || specialCategory !== undefined) {
+      setJobFilters(prev => ({
+        ...prev,
+        category: category || prev.category,
+        city: city || prev.city,
+        specialCategory: specialCategory !== undefined ? specialCategory : prev.specialCategory
+      }));
     }
 
     const route = getPathFromTab(tab);

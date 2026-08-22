@@ -46,7 +46,8 @@ export const JobListingsPage: React.FC<JobListingsPageProps> = ({
       city: 'TOUTES',
       contractType: 'TOUS',
       experienceLevel: 'TOUS',
-      sortBy: 'latest'
+      sortBy: 'latest',
+      specialCategory: ''
     });
   };
 
@@ -55,7 +56,8 @@ export const JobListingsPage: React.FC<JobListingsPageProps> = ({
     (filters.category !== 'TOUS' ? 1 : 0) +
     (filters.city !== 'TOUTES' ? 1 : 0) +
     (filters.contractType !== 'TOUS' ? 1 : 0) +
-    (filters.experienceLevel !== 'TOUS' ? 1 : 0);
+    (filters.experienceLevel !== 'TOUS' ? 1 : 0) +
+    (filters.specialCategory ? 1 : 0);
 
   const cities = ['TOUTES', 'Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'Kénitra', 'Tétouan'];
   const categories = ['TOUS', 'RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing'];
@@ -165,6 +167,12 @@ export const JobListingsPage: React.FC<JobListingsPageProps> = ({
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
                   {filters.contractType}
                   <button onClick={() => handleFilterChange('contractType', 'TOUS')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {filters.specialCategory && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-600/20 text-violet-300 text-xs font-semibold border border-violet-500/30">
+                  Catégorie : {filters.specialCategory}
+                  <button onClick={() => handleFilterChange('specialCategory', '')}><X className="w-3 h-3" /></button>
                 </span>
               )}
               <button

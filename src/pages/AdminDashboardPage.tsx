@@ -99,7 +99,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     contactSubject: '',
     salaryRange: '',
     description: '',
-    originalLink: ''
+    originalLink: '',
+    specialCategory: ''
   });
 
   const categories: JobCategory[] = ['RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing', 'Commercial', 'Logistique', 'Santé', 'Éducation', 'BTP', 'Finance', 'Hôtellerie', 'Juridique', 'Autre'];
@@ -221,7 +222,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       title: '', company: '', category: '' as unknown as JobCategory, city: '' as unknown as MoroccanCity,
       contractType: '' as unknown as ContractType, experienceLevel: '' as unknown as JobOffer['experienceLevel'],
       contactEmail: '', contactPhone: '', contactSubject: '',
-      salaryRange: '', description: '', originalLink: ''
+      salaryRange: '', description: '', originalLink: '',
+      specialCategory: ''
     });
     setLogoFile(null);
     setLogoPreview(null);
@@ -266,7 +268,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       contactSubject: job.contactSubject || '',
       salaryRange: job.salaryRange || '',
       description: fullDesc,
-      originalLink: job.originalLink || ''
+      originalLink: job.originalLink || '',
+      specialCategory: job.specialCategory || ''
     });
 
     // Réutiliser l'URL du logo existant (pas de re-upload)
@@ -327,7 +330,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         originalLink: formData.originalLink || undefined,
         featured: true,
         isActive: true,
-        status: 'approved'
+        status: 'approved',
+        specialCategory: (formData.specialCategory as any) || undefined
       });
 
       onJobAdded(created);
@@ -997,6 +1001,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Salaire (optionnel)</label>
                       <input type="text" value={formData.salaryRange} onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })} placeholder="ex: 5 000 – 7 000 MAD / mois" className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Catégorie Spéciale (optionnel)</label>
+                      <select
+                        value={formData.specialCategory}
+                        onChange={(e) => setFormData({ ...formData, specialCategory: e.target.value })}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                      >
+                        <option value="">Offre normale (aucune)</option>
+                        <option value="Concours & Grandes Écoles">Concours & Grandes Écoles</option>
+                        <option value="Grande Distribution & Retail">Grande Distribution & Retail</option>
+                        <option value="Fonction Publique">Fonction Publique</option>
+                      </select>
                     </div>
                   </div>
                 </div>
