@@ -15,7 +15,7 @@ export const fetchJobs = async (): Promise<JobOffer[]> => {
     .from(TABLE)
     .select(`
       *,
-      companies ( verification_status )
+      companies ( verification_status, category, slug )
     `)
     .eq('is_active', true)
     .eq('status', 'approved')
@@ -37,7 +37,7 @@ export const fetchAllJobs = async (): Promise<JobOffer[]> => {
     .from(TABLE)
     .select(`
       *,
-      companies ( verification_status )
+      companies ( verification_status, category, slug )
     `)
     .order('created_at', { ascending: false });
 
@@ -135,7 +135,6 @@ export const updateJobOffer = async (id: string, fields: Partial<JobOffer>): Pro
   if (fields.companyId !== undefined)      dbFields.company_id = fields.companyId ?? null;
   if (fields.domaine !== undefined)        dbFields.domaine = fields.domaine ?? null;
   if (fields.status !== undefined)         dbFields.status = fields.status;
-  if (fields.specialCategory !== undefined) dbFields.special_category = fields.specialCategory ?? null;
 
   const { error } = await supabase.from(TABLE).update(dbFields).eq('id', id);
 
@@ -243,8 +242,8 @@ export const filterJobs = (jobs: JobOffer[], filters: JobFilterState): JobOffer[
       if ((job.experienceLevel || '') !== filters.experienceLevel) return false;
     }
 
-    if (filters.specialCategory) {
-      if ((job.specialCategory || '').toLowerCase() !== filters.specialCategory.toLowerCase()) return false;
+    if (filters.institutionCategory) {
+      if ((job.companyCategory || '').toLowerCase() !== filters.institutionCategory.toLowerCase()) return false;
     }
 
     return true;

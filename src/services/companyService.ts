@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { Company, JobOffer, dbToJobOffer, DbJobOffer } from '../types';
+import { Company, JobOffer, dbToJobOffer, DbJobOffer, DbCompany, dbToCompany, CompanyCategory } from '../types';
 
 export const getCompanyProfile = async (userId: string): Promise<Company | null> => {
   const { data, error } = await supabase
@@ -19,25 +19,79 @@ export const getCompanyProfile = async (userId: string): Promise<Company | null>
   }
 
   const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+  return dbToCompany(data as DbCompany, profile);
+};
 
-  return {
-    id: data.id,
-    role: profile?.role || 'entreprise',
-    createdAt: profile?.created_at || data.created_at,
-    companyName: data.company_name,
-    description: data.description || undefined,
-    logoUrl: data.logo_url || undefined,
-    phone: data.phone || undefined,
-    secteur: data.secteur || undefined,
-    ville: data.ville || undefined,
-    contactPerson: data.contact_person || undefined,
-    website: data.website || undefined,
-    workforceSize: data.workforce_size || undefined,
-    iceNumber: data.ice_number || undefined,
-    linkedinUrl: data.linkedin_url || undefined,
-    verificationStatus: (data.verification_status as any) || 'pending',
-    rejectionReason: data.rejection_reason || undefined,
-  };
+/** Récupère une entreprise/institution publique par son slug */
+export const getCompanyBySlug = async (slug: string): Promise<Company | null> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error('[companyService] Erreur getCompanyBySlug:', error.message);
+    return null;
+  }
+
+  return dbToCompany(data as DbCompany);
+};
+
+const DIACRITICS_REGEX = /[̀-ͯ]/g;
+
+const slugify = (text: string): string =>
+  text
+    .normalize('NFD')
+    .replace(DIACRITICS_REGEX, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+/** Crée une nouvelle institution (entreprise/école/état), action Admin uniquement */
+export const createCompany = async (payload: {
+  companyName: string;
+  category: CompanyCategory;
+  logoUrl?: string;
+  ville?: string;
+  secteur?: string;
+  website?: string;
+}): Promise<Company> => {
+  const baseSlug = slugify(payload.companyName) || 'institution';
+  let slug = baseSlug;
+  let attempt = 0;
+
+  while (attempt < 5) {
+    const { data, error } = await supabase
+      .from('companies')
+      .insert([{
+        company_name: payload.companyName,
+        category: payload.category,
+        slug,
+        logo_url: payload.logoUrl ?? null,
+        ville: payload.ville ?? null,
+        secteur: payload.secteur ?? null,
+        website: payload.website ?? null,
+        verification_status: 'verified',
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      return dbToCompany(data as DbCompany);
+    }
+
+    if (error?.code === '23505') {
+      attempt += 1;
+      slug = `${baseSlug}-${attempt + 1}`;
+      continue;
+    }
+
+    throw new Error(`Erreur lors de la création de l'institution: ${error?.message}`);
+  }
+
+  throw new Error("Erreur lors de la création de l'institution: impossible de générer un identifiant unique.");
 };
 
 export const upsertCompanyProfile = async (
@@ -75,7 +129,7 @@ export const getCompanyJobs = async (companyId: string): Promise<JobOffer[]> => 
     .from('job_offers')
     .select(`
       *,
-      companies ( verification_status )
+      companies ( verification_status, category, slug )
     `)
     .eq('company_id', companyId)
     .order('created_at', { ascending: false });
@@ -88,7 +142,7 @@ export const getCompanyJobs = async (companyId: string): Promise<JobOffer[]> => 
   return (data as DbJobOffer[]).map(dbToJobOffer);
 };
 
-/** Récupère toutes les entreprises enregistrées (pour l'Admin) */
+/** Récupère toutes les entreprises enregistrées (pour l'Admin et les pages publiques) */
 export const fetchAllCompanies = async (): Promise<Company[]> => {
   const { data, error } = await supabase
     .from('companies')
@@ -105,24 +159,7 @@ export const fetchAllCompanies = async (): Promise<Company[]> => {
 
   return (data || []).map(row => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    return {
-      id: row.id,
-      role: profile?.role || 'entreprise',
-      createdAt: profile?.created_at || row.created_at,
-      companyName: row.company_name,
-      description: row.description || undefined,
-      logoUrl: row.logo_url || undefined,
-      phone: row.phone || undefined,
-      secteur: row.secteur || undefined,
-      ville: row.ville || undefined,
-      contactPerson: row.contact_person || undefined,
-      website: row.website || undefined,
-      workforceSize: row.workforce_size || undefined,
-      iceNumber: row.ice_number || undefined,
-      linkedinUrl: row.linkedin_url || undefined,
-      verificationStatus: (row.verification_status as any) || 'pending',
-      rejectionReason: row.rejection_reason || undefined,
-    };
+    return dbToCompany(row as DbCompany, profile);
   });
 };
 

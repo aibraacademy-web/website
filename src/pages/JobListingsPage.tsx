@@ -3,6 +3,7 @@ import { JobOffer, JobFilterState } from '../types';
 import { filterJobs } from '../services/jobService';
 import { JobCard } from '../components/JobCard';
 import { JobFilters } from '../components/JobFilters';
+import { getCompanyCategoryMeta } from '../lib/companyCategories';
 import { 
   Search, 
   Filter, 
@@ -47,17 +48,17 @@ export const JobListingsPage: React.FC<JobListingsPageProps> = ({
       contractType: 'TOUS',
       experienceLevel: 'TOUS',
       sortBy: 'latest',
-      specialCategory: ''
+      institutionCategory: ''
     });
   };
 
-  const activeFiltersCount = 
+  const activeFiltersCount =
     (filters.keyword ? 1 : 0) +
     (filters.category !== 'TOUS' ? 1 : 0) +
     (filters.city !== 'TOUTES' ? 1 : 0) +
     (filters.contractType !== 'TOUS' ? 1 : 0) +
     (filters.experienceLevel !== 'TOUS' ? 1 : 0) +
-    (filters.specialCategory ? 1 : 0);
+    (filters.institutionCategory ? 1 : 0);
 
   const cities = ['TOUTES', 'Casablanca', 'Rabat', 'Tanger', 'Marrakech', 'Agadir', 'Fès', 'Oujda', 'Meknès', 'Kénitra', 'Tétouan'];
   const categories = ['TOUS', 'RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing'];
@@ -169,10 +170,10 @@ export const JobListingsPage: React.FC<JobListingsPageProps> = ({
                   <button onClick={() => handleFilterChange('contractType', 'TOUS')}><X className="w-3 h-3" /></button>
                 </span>
               )}
-              {filters.specialCategory && (
+              {filters.institutionCategory && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-600/20 text-violet-300 text-xs font-semibold border border-violet-500/30">
-                  Catégorie : {filters.specialCategory}
-                  <button onClick={() => handleFilterChange('specialCategory', '')}><X className="w-3 h-3" /></button>
+                  Catégorie : {getCompanyCategoryMeta(filters.institutionCategory)?.shortLabel || filters.institutionCategory}
+                  <button onClick={() => handleFilterChange('institutionCategory', '')}><X className="w-3 h-3" /></button>
                 </span>
               )}
               <button

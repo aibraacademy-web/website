@@ -1,13 +1,14 @@
 import React from 'react';
-import { JobOffer, StatisticsData } from '../types';
+import { JobOffer, StatisticsData, CompanyCategory } from '../types';
 import { HeroSection } from '../components/HeroSection';
 import { CounterSection } from '../components/CounterSection';
 import { PopularCategories } from '../components/PopularCategories';
 import { JobCard } from '../components/JobCard';
-import { 
-  ArrowRight, 
+import { COMPANY_CATEGORIES } from '../lib/companyCategories';
+import {
+  ArrowRight,
   BookOpen,
-  ShoppingCart,
+  Building2,
   Landmark
 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ interface HomePageProps {
   onOpenMailModal: (job: JobOffer) => void;
   onSelectJob: (job: JobOffer) => void;
   onNavigate: (tab: string, category?: string, city?: string) => void;
+  onSelectCategory: (category: CompanyCategory) => void;
   onSearch: (keyword: string, city: string) => void;
 }
 
@@ -30,6 +32,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenMailModal,
   onSelectJob,
   onNavigate,
+  onSelectCategory,
   onSearch
 }) => {
   // Compute category counts
@@ -116,36 +119,20 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* 5. Catégories spécialisées — toujours visibles, désactivées si 0 offre */}
       {(() => {
-        const countGrandesEcoles = jobs.filter(j => j.specialCategory === 'Concours & Grandes Écoles' && j.isActive && j.status === 'approved').length;
-        const countRetail = jobs.filter(j => j.specialCategory === 'Grande Distribution & Retail' && j.isActive && j.status === 'approved').length;
-        const countFonctionPublique = jobs.filter(j => j.specialCategory === 'Fonction Publique' && j.isActive && j.status === 'approved').length;
+        const categoryIcons: Record<CompanyCategory, React.ReactNode> = {
+          ecole: <BookOpen className="w-5 h-5 text-emerald-400" />,
+          entreprise: <Building2 className="w-5 h-5 text-emerald-400" />,
+          etat: <Landmark className="w-5 h-5 text-emerald-400" />,
+        };
 
-        const cards = [
-          {
-            key: 'grandes-ecoles',
-            count: countGrandesEcoles,
-            label: 'Concours & Grandes Écoles',
-            description: 'Offres liées aux concours d\'entrée et grandes écoles marocaines (ENCG, ENSA, EST, écoles d\'ingénieurs...)',
-            icon: <BookOpen className="w-5 h-5 text-emerald-400" />,
-            category: 'Concours & Grandes Écoles' as const,
-          },
-          {
-            key: 'retail',
-            count: countRetail,
-            label: 'Grande Distribution & Retail',
-            description: 'Offres d\'emploi dans les grandes surfaces et enseignes de distribution (Marjane, Carrefour, Aswak Assalam...)',
-            icon: <ShoppingCart className="w-5 h-5 text-emerald-400" />,
-            category: 'Grande Distribution & Retail' as const,
-          },
-          {
-            key: 'fonction-publique',
-            count: countFonctionPublique,
-            label: 'Fonction Publique & Concours d\'État',
-            description: 'Offres et concours du secteur public : Police, Gendarmerie, Collectivités territoriales (Jamaa/Commune), administrations...',
-            icon: <Landmark className="w-5 h-5 text-emerald-400" />,
-            category: 'Fonction Publique' as const,
-          },
-        ];
+        const cards = COMPANY_CATEGORIES.map(meta => ({
+          key: meta.value,
+          count: jobs.filter(j => j.companyCategory === meta.value && j.isActive && j.status === 'approved').length,
+          label: meta.label,
+          description: meta.description,
+          icon: categoryIcons[meta.value],
+          category: meta.value,
+        }));
 
         return (
           <section className="py-12 sm:py-16 bg-slate-900 border-b border-slate-800">
@@ -166,13 +153,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                   return (
                     <div
                       key={key}
-                      onClick={isEmpty ? undefined : () => onNavigate('jobs', undefined, undefined, category)}
-                      className={[
-                        'group bg-slate-800 p-6 rounded-xl border transition-all duration-200 flex flex-col justify-between',
-                        isEmpty
-                          ? 'border-slate-700/50 opacity-60 cursor-default'
-                          : 'border-slate-700 cursor-pointer hover:border-emerald-500 hover:bg-slate-800/80',
-                      ].join(' ')}
+                      onClick={() => onSelectCategory(category)}
+                      className="group bg-slate-800 p-6 rounded-xl border border-slate-700 cursor-pointer transition-all duration-200 flex flex-col justify-between hover:border-emerald-500 hover:bg-slate-800/80"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-4">
@@ -207,13 +189,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                         </p>
                       </div>
 
-                      <div className={[
-                        'pt-4 border-t flex items-center justify-between text-xs font-semibold mt-4',
-                        isEmpty
-                          ? 'border-slate-700/30 text-slate-600 pointer-events-none'
-                          : 'border-slate-700/60 text-emerald-500 group-hover:text-emerald-400',
-                      ].join(' ')}>
-                        <span>Explorer les offres</span>
+                      <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold mt-4 text-emerald-500 group-hover:text-emerald-400">
+                        <span>Découvrir les institutions</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>

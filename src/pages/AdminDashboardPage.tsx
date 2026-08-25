@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { JobOffer, JobCategory, MoroccanCity, ContractType, Company } from '../types';
+import { JobOffer, JobCategory, MoroccanCity, ContractType, Company, CompanyCategory } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
-import { fetchAllCompanies, updateCompanyVerificationStatus } from '../services/companyService';
+import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  PlusCircle, 
-  Building2, 
-  MapPin, 
-  FileText, 
-  CheckCircle2, 
+import { COMPANY_CATEGORIES } from '../lib/companyCategories';
+import {
+  PlusCircle,
+  Building2,
+  MapPin,
+  FileText,
+  CheckCircle2,
   List,
   Trash2,
   Settings,
@@ -29,7 +30,10 @@ import {
   XCircle,
   Building,
   Clock,
-  Copy
+  Copy,
+  BookOpen,
+  Landmark,
+  ChevronRight
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -68,6 +72,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [parseNotice, setParseNotice] = useState<{ message: string, type: 'success' | 'warning' } | null>(null);
   const [undetectedFields, setUndetectedFields] = useState<string[]>([]);
 
+  // Sélection institution (flow séquentiel du formulaire "Ajouter")
+  const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | ''>('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [isAddingNewCompany, setIsAddingNewCompany] = useState(false);
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false);
+  const [newCompanyForm, setNewCompanyForm] = useState({ companyName: '', ville: '', secteur: '', website: '' });
+
   const loadCompanies = async () => {
     setIsLoadingCompanies(true);
     try {
@@ -81,10 +92,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'companies') {
-      loadCompanies();
-    }
-  }, [activeTab]);
+    loadCompanies();
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -99,8 +108,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     contactSubject: '',
     salaryRange: '',
     description: '',
-    originalLink: '',
-    specialCategory: ''
+    originalLink: ''
   });
 
   const categories: JobCategory[] = ['RH', 'Comptabilité', 'Mécanique', 'Administration', 'Informatique', 'Agriculture', 'Marketing', 'Commercial', 'Logistique', 'Santé', 'Éducation', 'BTP', 'Finance', 'Hôtellerie', 'Juridique', 'Autre'];
@@ -169,7 +177,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       setFormData(prev => ({
         ...prev,
         title: parsed.title || prev.title,
-        company: parsed.company || prev.company,
         city: parsed.city || prev.city,
         category: parsed.category || prev.category,
         contractType: parsed.contractType || prev.contractType,
@@ -185,7 +192,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       const missing = [];
 
       if (parsed.title) detected.push('Titre'); else missing.push('Titre');
-      if (parsed.company) detected.push('Entreprise');
       if (parsed.city) detected.push('Ville');
       if (parsed.category) detected.push('Secteur');
       if (parsed.contractType) detected.push('Contrat');
@@ -222,8 +228,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       title: '', company: '', category: '' as unknown as JobCategory, city: '' as unknown as MoroccanCity,
       contractType: '' as unknown as ContractType, experienceLevel: '' as unknown as JobOffer['experienceLevel'],
       contactEmail: '', contactPhone: '', contactSubject: '',
-      salaryRange: '', description: '', originalLink: '',
-      specialCategory: ''
+      salaryRange: '', description: '', originalLink: ''
     });
     setLogoFile(null);
     setLogoPreview(null);
@@ -231,6 +236,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setLinkedInText('');
     setParseNotice(null);
     setUndetectedFields([]);
+    setSelectedCategory('');
+    setSelectedCompanyId('');
+    setIsAddingNewCompany(false);
+    setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -268,9 +277,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       contactSubject: job.contactSubject || '',
       salaryRange: job.salaryRange || '',
       description: fullDesc,
-      originalLink: job.originalLink || '',
-      specialCategory: job.specialCategory || ''
+      originalLink: job.originalLink || ''
     });
+
+    // Préselectionner catégorie + institution si l'offre originale est liée à une entreprise connue
+    const linkedCompany = job.companyId ? companies.find(c => c.id === job.companyId) : undefined;
+    if (linkedCompany && linkedCompany.category) {
+      setSelectedCategory(linkedCompany.category);
+      setSelectedCompanyId(linkedCompany.id);
+    } else {
+      setSelectedCategory('');
+      setSelectedCompanyId('');
+    }
+    setIsAddingNewCompany(false);
 
     // Réutiliser l'URL du logo existant (pas de re-upload)
     if (job.companyLogo) {
@@ -296,9 +315,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!selectedCompanyId) {
+      alert("Veuillez sélectionner une catégorie et une institution avant de publier l'offre.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // 1. Upload logo si présent, sinon réutiliser l'URL dupliquée
+      // 1. Upload logo si présent, sinon réutiliser l'URL dupliquée (ou le logo de l'institution)
       let logoUrl: string | undefined;
       if (logoFile) {
         logoUrl = await uploadLogo(logoFile);
@@ -313,6 +337,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       const created = await createJobOffer({
         title: formData.title,
         company: formData.company,
+        companyId: selectedCompanyId,
         companyInitials: initials,
         companyLogo: logoUrl,
         category: formData.category,
@@ -330,8 +355,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         originalLink: formData.originalLink || undefined,
         featured: true,
         isActive: true,
-        status: 'approved',
-        specialCategory: (formData.specialCategory as any) || undefined
+        status: 'approved'
       });
 
       onJobAdded(created);
@@ -348,6 +372,57 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       alert(`Erreur lors de la publication : ${msg}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // ─── Sélection / création d'institution (formulaire Ajouter) ────────────────
+
+  const handleSelectExistingCompany = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setIsAddingNewCompany(false);
+    const company = companies.find(c => c.id === companyId);
+    if (company) {
+      setFormData(prev => ({ ...prev, company: company.companyName }));
+      if (company.logoUrl) {
+        setDuplicatedLogoUrl(company.logoUrl);
+        setLogoPreview(company.logoUrl);
+      } else {
+        setDuplicatedLogoUrl(null);
+        setLogoPreview(null);
+      }
+      setLogoFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCreateCompany = async () => {
+    if (!selectedCategory || !newCompanyForm.companyName.trim()) {
+      alert("Le nom de l'institution est requis.");
+      return;
+    }
+    setIsCreatingCompany(true);
+    try {
+      let logoUrl: string | undefined;
+      if (logoFile) {
+        logoUrl = await uploadLogo(logoFile);
+      }
+      const created = await createCompany({
+        companyName: newCompanyForm.companyName.trim(),
+        category: selectedCategory,
+        logoUrl,
+        ville: newCompanyForm.ville || undefined,
+        secteur: newCompanyForm.secteur || undefined,
+        website: newCompanyForm.website || undefined,
+      });
+      setCompanies(prev => [created, ...prev]);
+      handleSelectExistingCompany(created.id);
+      setIsAddingNewCompany(false);
+      setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Erreur lors de la création de l'institution : ${msg}`);
+    } finally {
+      setIsCreatingCompany(false);
     }
   };
 
@@ -873,11 +948,155 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   )}
                 </div>
 
+                {/* Section: Institution (flow séquentiel) */}
+                <div className="space-y-4 pb-6 border-b border-slate-200">
+                  <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-emerald-600" />
+                    1. Institution
+                  </h2>
+
+                  {/* Étape 1 : catégorie */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Catégorie</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {COMPANY_CATEGORIES.map(meta => {
+                        const Icon = meta.value === 'ecole' ? BookOpen : meta.value === 'etat' ? Landmark : Building2;
+                        const isSelected = selectedCategory === meta.value;
+                        return (
+                          <button
+                            key={meta.value}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategory(meta.value);
+                              setSelectedCompanyId('');
+                              setIsAddingNewCompany(false);
+                            }}
+                            className={`text-left p-4 rounded-xl border-2 transition-all ${
+                              isSelected
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                              <Icon className="w-4.5 h-4.5" />
+                            </div>
+                            <p className={`text-sm font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-800'}`}>{meta.shortLabel}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Étape 2 : institution */}
+                  {selectedCategory && (
+                    <div className="pl-1 border-l-2 border-emerald-200 ml-1 pl-4 space-y-3">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center gap-1">
+                        <ChevronRight className="w-3.5 h-3.5 text-emerald-600" />
+                        Institution
+                      </label>
+
+                      {!isAddingNewCompany ? (
+                        <select
+                          value={selectedCompanyId}
+                          onChange={(e) => {
+                            if (e.target.value === '__new__') {
+                              setIsAddingNewCompany(true);
+                              setSelectedCompanyId('');
+                            } else {
+                              handleSelectExistingCompany(e.target.value);
+                            }
+                          }}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                        >
+                          <option value="" disabled>Sélectionner une institution</option>
+                          {companies.filter(c => c.category === selectedCategory).map(c => (
+                            <option key={c.id} value={c.id}>{c.companyName}</option>
+                          ))}
+                          <option value="__new__">+ Ajouter une nouvelle institution</option>
+                        </select>
+                      ) : (
+                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nom de l'institution</label>
+                              <input
+                                type="text"
+                                value={newCompanyForm.companyName}
+                                onChange={(e) => setNewCompanyForm(prev => ({ ...prev, companyName: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ville (optionnel)</label>
+                              <input
+                                type="text"
+                                value={newCompanyForm.ville}
+                                onChange={(e) => setNewCompanyForm(prev => ({ ...prev, ville: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Secteur (optionnel)</label>
+                              <input
+                                type="text"
+                                value={newCompanyForm.secteur}
+                                onChange={(e) => setNewCompanyForm(prev => ({ ...prev, secteur: e.target.value }))}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Site web (optionnel)</label>
+                              <input
+                                type="url"
+                                value={newCompanyForm.website}
+                                onChange={(e) => setNewCompanyForm(prev => ({ ...prev, website: e.target.value }))}
+                                placeholder="https://..."
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCreateCompany}
+                              disabled={isCreatingCompany || !newCompanyForm.companyName.trim()}
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-bold transition-all"
+                            >
+                              {isCreatingCompany ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlusCircle className="w-3.5 h-3.5" />}
+                              Créer et sélectionner
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingNewCompany(false)}
+                              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedCompanyId && (
+                        <p className="text-xs text-emerald-700 flex items-center gap-1 font-semibold">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Institution sélectionnée : {formData.company}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {!selectedCompanyId ? (
+                  <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500 text-center">
+                    Sélectionnez une catégorie puis une institution pour continuer.
+                  </div>
+                ) : (
+                <>
                 {/* Section: Informations du poste */}
                 <div className="space-y-4 pb-6 border-b border-slate-200">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-emerald-600" />
-                    1. Informations du poste
+                    2. Informations du poste
                   </h2>
 
                   {/* Logo Upload */}
@@ -935,8 +1154,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nom de l'entreprise</label>
-                      <input type="text" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Institution</label>
+                      <div className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 font-medium">
+                        {formData.company}
+                      </div>
                     </div>
 
                     <div>
@@ -962,7 +1183,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="space-y-4 pb-6 border-b border-slate-200">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-emerald-600" />
-                    2. Caractéristiques
+                    3. Caractéristiques
                   </h2>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1002,20 +1223,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Salaire (optionnel)</label>
                       <input type="text" value={formData.salaryRange} onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })} placeholder="ex: 5 000 – 7 000 MAD / mois" className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500" />
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Catégorie Spéciale (optionnel)</label>
-                      <select
-                        value={formData.specialCategory}
-                        onChange={(e) => setFormData({ ...formData, specialCategory: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
-                      >
-                        <option value="">Offre normale (aucune)</option>
-                        <option value="Concours & Grandes Écoles">Concours & Grandes Écoles</option>
-                        <option value="Grande Distribution & Retail">Grande Distribution & Retail</option>
-                        <option value="Fonction Publique">Fonction Publique</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -1023,7 +1230,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="space-y-4">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <FileText className="w-5 h-5 text-emerald-600" />
-                    3. Description complète de l'offre
+                    4. Description complète de l'offre
                   </h2>
 
                   <div>
@@ -1049,7 +1256,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !selectedCompanyId}
                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 transition-all"
                   >
                     {isSubmitting ? (
@@ -1065,6 +1272,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     )}
                   </button>
                 </div>
+                </>
+                )}
 
               </form>
             )}

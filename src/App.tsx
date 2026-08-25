@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { JobOffer, JobFilterState } from './types';
-import { 
+import { JobOffer, JobFilterState, Company, CompanyCategory } from './types';
+import {
   fetchJobs,
   fetchAllJobs,
-  getSavedJobIds, 
-  toggleSaveJob, 
+  getSavedJobIds,
+  toggleSaveJob,
   getPlatformStats,
   incrementJobViews
 } from './services/jobService';
+import { fetchAllCompanies } from './services/companyService';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -19,6 +20,8 @@ import { SavedJobsModal } from './components/SavedJobsModal';
 import { HomePage } from './pages/HomePage';
 import { JobListingsPage } from './pages/JobListingsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
+import { CategoryPage } from './pages/CategoryPage';
+import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AboutPage } from './pages/AboutPage';
@@ -49,6 +52,8 @@ export default function App() {
   
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [routeJobId, setRouteJobId] = useState<string | null>(null);
+  const [routeCompanySlug, setRouteCompanySlug] = useState<string | null>(null);
+  const [routeCategory, setRouteCategory] = useState<CompanyCategory | null>(null);
   const [mailtoJob, setMailtoJob] = useState<JobOffer | null>(null);
   
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
@@ -75,6 +80,10 @@ export default function App() {
       const [, slug] = cleanPath.split('/');
       return { tab: 'company-detail', slug };
     }
+    if (cleanPath.startsWith('categories/')) {
+      const [, category] = cleanPath.split('/');
+      return { tab: 'category-page', category };
+    }
     if (cleanPath.startsWith('about')) {
       return { tab: 'about' };
     }
@@ -88,21 +97,26 @@ export default function App() {
     const initialRoute = resolveRouteFromPath(window.location.pathname, isAdminAuthenticated);
     setCurrentTab(initialRoute.tab);
     setRouteJobId(initialRoute.jobId || null);
+    setRouteCompanySlug(initialRoute.slug || null);
+    setRouteCategory((initialRoute.category as CompanyCategory) || null);
 
     const handlePopState = () => {
       const route = resolveRouteFromPath(window.location.pathname, isAdminAuthenticated);
       setCurrentTab(route.tab);
       setRouteJobId(route.jobId || null);
+      setRouteCompanySlug(route.slug || null);
+      setRouteCategory((route.category as CompanyCategory) || null);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isAdminAuthenticated]);
 
-  const getPathFromTab = (tab: string, jobId?: string, slug?: string) => {
+  const getPathFromTab = (tab: string, jobId?: string, slug?: string, category?: string) => {
     if (tab === 'jobs') return '/offres';
     if (tab === 'job-detail' && jobId) return `/offres/${jobId}`;
     if (tab === 'company-detail' && slug) return `/entreprises/${slug}`;
+    if (tab === 'category-page' && category) return `/categories/${category}`;
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
@@ -121,8 +135,11 @@ export default function App() {
     contractType: 'TOUS',
     experienceLevel: 'TOUS',
     sortBy: 'latest',
-    specialCategory: ''
+    institutionCategory: ''
   });
+
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState<boolean>(true);
 
   // Charge les offres publiques depuis Supabase
   const loadPublicJobs = useCallback(async () => {
@@ -137,11 +154,25 @@ export default function App() {
     }
   }, []);
 
+  // Charge les entreprises/institutions publiques depuis Supabase
+  const loadPublicCompanies = useCallback(async () => {
+    setIsLoadingCompanies(true);
+    try {
+      const loadedCompanies = await fetchAllCompanies();
+      setCompanies(loadedCompanies);
+    } catch (error) {
+      console.error('[App] Erreur chargement institutions:', error);
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  }, []);
+
   // Load initial dataset & bookmarks on mount
   useEffect(() => {
     loadPublicJobs();
+    loadPublicCompanies();
     setSavedJobIds(getSavedJobIds());
-  }, [loadPublicJobs]);
+  }, [loadPublicJobs, loadPublicCompanies]);
 
   // Sync selected job with route ID when jobs are available
   useEffect(() => {
@@ -177,7 +208,7 @@ export default function App() {
   };
 
   // Navigation helper
-  const handleNavigate = (tab: string, category?: string, city?: string, specialCategory?: string) => {
+  const handleNavigate = (tab: string, category?: string, city?: string, institutionCategory?: string) => {
     if (tab === 'jobs') {
       setRouteJobId(null);
       setSelectedJob(null);
@@ -188,20 +219,36 @@ export default function App() {
         contractType: 'TOUS',
         experienceLevel: 'TOUS',
         sortBy: 'latest',
-        specialCategory: specialCategory || ''
+        institutionCategory: institutionCategory || ''
       });
-    } else if (category || city || specialCategory !== undefined) {
+    } else if (category || city || institutionCategory !== undefined) {
       setJobFilters(prev => ({
         ...prev,
         category: category || prev.category,
         city: city || prev.city,
-        specialCategory: specialCategory !== undefined ? specialCategory : prev.specialCategory
+        institutionCategory: institutionCategory !== undefined ? institutionCategory : prev.institutionCategory
       }));
     }
 
     const route = getPathFromTab(tab);
     window.history.pushState(null, '', route);
     setCurrentTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Select a company category page (/categories/:category)
+  const handleSelectCategory = (category: CompanyCategory) => {
+    setRouteCategory(category);
+    window.history.pushState(null, '', getPathFromTab('category-page', undefined, undefined, category));
+    setCurrentTab('category-page');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Select a company detail page (/entreprises/:slug)
+  const handleSelectCompany = (slug: string) => {
+    setRouteCompanySlug(slug);
+    window.history.pushState(null, '', getPathFromTab('company-detail', undefined, slug));
+    setCurrentTab('company-detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -263,6 +310,7 @@ export default function App() {
             onOpenMailModal={handleOpenMailModal}
             onSelectJob={handleSelectJob}
             onNavigate={handleNavigate}
+            onSelectCategory={handleSelectCategory}
             onSearch={handleSearchTrigger}
           />
         )}
@@ -275,6 +323,31 @@ export default function App() {
             onToggleSave={handleToggleSave}
             onOpenMailModal={handleOpenMailModal}
             onSelectJob={handleSelectJob}
+          />
+        )}
+
+        {currentTab === 'category-page' && routeCategory && (
+          <CategoryPage
+            category={routeCategory}
+            jobs={jobs}
+            companies={companies}
+            isLoadingCompanies={isLoadingCompanies}
+            onNavigateHome={() => handleNavigate('home')}
+            onSelectCompany={handleSelectCompany}
+            onViewAllOffers={(category) => handleNavigate('jobs', undefined, undefined, category)}
+          />
+        )}
+
+        {currentTab === 'company-detail' && routeCompanySlug && (
+          <CompanyDetailPage
+            slug={routeCompanySlug}
+            jobs={jobs}
+            savedJobIds={savedJobIds}
+            onToggleSave={handleToggleSave}
+            onOpenMailModal={handleOpenMailModal}
+            onSelectJob={handleSelectJob}
+            onNavigateHome={() => handleNavigate('home')}
+            onSelectCategory={handleSelectCategory}
           />
         )}
 

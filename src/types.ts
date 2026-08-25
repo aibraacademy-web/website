@@ -94,6 +94,8 @@ export type JobStatus = 'pending' | 'approved' | 'rejected';
 
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
+export type CompanyCategory = 'entreprise' | 'ecole' | 'etat';
+
 export interface Profile {
   id: string;
   role: UserRole;
@@ -112,6 +114,8 @@ export interface Candidate extends Profile {
 
 export interface Company extends Profile {
   companyName: string;
+  slug?: string;
+  category?: CompanyCategory;
   description?: string;
   logoUrl?: string;
   phone?: string;
@@ -126,8 +130,6 @@ export interface Company extends Profile {
   rejectionReason?: string;
   email?: string;
 }
-
-export type SpecialCategory = 'Concours & Grandes Écoles' | 'Grande Distribution & Retail' | 'Fonction Publique';
 
 export interface JobOffer {
   id: string;
@@ -156,9 +158,10 @@ export interface JobOffer {
   viewsCount?: number;
   applicationsCount?: number;
   companyId?: string;
+  companyCategory?: CompanyCategory;
+  companySlug?: string;
   domaine?: string;
   status: JobStatus;
-  specialCategory?: SpecialCategory;
 }
 
 export interface JobFilterState {
@@ -168,7 +171,7 @@ export interface JobFilterState {
   contractType: string;
   experienceLevel: string;
   sortBy: 'latest' | 'popular';
-  specialCategory?: string;
+  institutionCategory?: string;
 }
 
 export interface StatisticsData {
@@ -201,6 +204,8 @@ export interface DbCandidate {
 export interface DbCompany {
   id: string;
   company_name: string;
+  slug: string | null;
+  category: string | null;
   description: string | null;
   logo_url: string | null;
   phone: string | null;
@@ -243,11 +248,14 @@ export interface DbJobOffer {
   company_id: string | null;
   domaine: string | null;
   status: string;
-  special_category: string | null;
   companies?: {
     verification_status?: string;
+    category?: string;
+    slug?: string;
   } | {
     verification_status?: string;
+    category?: string;
+    slug?: string;
   }[];
 }
 
@@ -273,6 +281,7 @@ const formatPublishedAt = (isoDate: string): string => {
 export const dbToJobOffer = (row: DbJobOffer): JobOffer => {
   const companyObj = Array.isArray(row.companies) ? row.companies[0] : row.companies;
   const isVerified = companyObj?.verification_status === 'verified';
+  const companyCategory = companyObj?.category as CompanyCategory | undefined;
 
   return {
     id: row.id,
@@ -301,9 +310,10 @@ export const dbToJobOffer = (row: DbJobOffer): JobOffer => {
     viewsCount: row.views_count,
     applicationsCount: row.applications_count,
     companyId: row.company_id ?? undefined,
+    companyCategory,
+    companySlug: companyObj?.slug ?? undefined,
     domaine: row.domaine ?? undefined,
     status: (row.status as JobStatus) || 'approved',
-    specialCategory: (row.special_category as JobOffer['specialCategory']) ?? undefined,
   };
 };
 
@@ -333,5 +343,26 @@ export const jobOfferToDb = (
   company_id: job.companyId ?? null,
   domaine: job.domaine ?? null,
   status: job.status,
-  special_category: job.specialCategory ?? null,
+});
+
+/** Convertit une ligne DB → Company applicatif */
+export const dbToCompany = (row: DbCompany, profile?: { role?: string; created_at?: string }): Company => ({
+  id: row.id,
+  role: (profile?.role as UserRole) || 'entreprise',
+  createdAt: profile?.created_at || row.created_at,
+  companyName: row.company_name,
+  slug: row.slug ?? undefined,
+  category: (row.category as CompanyCategory) ?? undefined,
+  description: row.description || undefined,
+  logoUrl: row.logo_url || undefined,
+  phone: row.phone || undefined,
+  secteur: row.secteur || undefined,
+  ville: row.ville || undefined,
+  contactPerson: row.contact_person || undefined,
+  website: row.website || undefined,
+  workforceSize: row.workforce_size || undefined,
+  iceNumber: row.ice_number || undefined,
+  linkedinUrl: row.linkedin_url || undefined,
+  verificationStatus: (row.verification_status as VerificationStatus) || 'pending',
+  rejectionReason: row.rejection_reason || undefined,
 });
