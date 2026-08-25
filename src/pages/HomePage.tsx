@@ -7,8 +7,8 @@ import { JobCard } from '../components/JobCard';
 import { COMPANY_CATEGORIES } from '../lib/companyCategories';
 import {
   ArrowRight,
-  BookOpen,
-  Building2,
+  GraduationCap,
+  Briefcase,
   Landmark
 } from 'lucide-react';
 
@@ -119,10 +119,19 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* 5. Catégories spécialisées — toujours visibles, désactivées si 0 offre */}
       {(() => {
-        const categoryIcons: Record<CompanyCategory, React.ReactNode> = {
-          ecole: <BookOpen className="w-5 h-5 text-emerald-400" />,
-          entreprise: <Building2 className="w-5 h-5 text-emerald-400" />,
-          etat: <Landmark className="w-5 h-5 text-emerald-400" />,
+        const categoryStyles: Record<CompanyCategory, { icon: React.ReactNode; iconBg: string }> = {
+          ecole: {
+            icon: <GraduationCap className="w-5 h-5 text-violet-600" />,
+            iconBg: 'bg-violet-50 border-violet-100 group-hover:bg-violet-100',
+          },
+          entreprise: {
+            icon: <Briefcase className="w-5 h-5 text-blue-600" />,
+            iconBg: 'bg-blue-50 border-blue-100 group-hover:bg-blue-100',
+          },
+          etat: {
+            icon: <Landmark className="w-5 h-5 text-amber-600" />,
+            iconBg: 'bg-amber-50 border-amber-100 group-hover:bg-amber-100',
+          },
         };
 
         const cards = COMPANY_CATEGORIES.map(meta => ({
@@ -130,58 +139,53 @@ export const HomePage: React.FC<HomePageProps> = ({
           count: jobs.filter(j => j.companyCategory === meta.value && j.isActive && j.status === 'approved').length,
           label: meta.label,
           description: meta.description,
-          icon: categoryIcons[meta.value],
+          ...categoryStyles[meta.value],
           category: meta.value,
         }));
 
         return (
-          <section className="py-12 sm:py-16 bg-slate-900 border-b border-slate-800">
+          <section className="py-12 sm:py-16 bg-white border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
               <div className="mb-10">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
                   Catégories spécialisées
                 </h2>
-                <p className="text-slate-400 text-sm mt-1">
+                <p className="text-slate-500 text-sm mt-1">
                   Accédez directement aux offres correspondant à votre parcours ou secteur cible.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {cards.map(({ key, count, label, description, icon, category }) => {
+                {cards.map(({ key, count, label, description, icon, iconBg, category }) => {
                   const isEmpty = count === 0;
                   return (
                     <div
                       key={key}
                       onClick={() => onSelectCategory(category)}
-                      className="group bg-slate-800 p-6 rounded-xl border border-slate-700 cursor-pointer transition-all duration-200 flex flex-col justify-between hover:border-emerald-500 hover:bg-slate-800/80"
+                      className="group bg-white p-6 rounded-xl border border-slate-200 shadow-sm cursor-pointer transition-all duration-200 ease-out flex flex-col justify-between hover:border-emerald-300 hover:shadow-lg hover:-translate-y-1.5"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-4">
                           <div className={[
-                            'w-10 h-10 rounded-lg border flex items-center justify-center transition-colors',
-                            isEmpty
-                              ? 'bg-slate-700/40 border-slate-600/30'
-                              : 'bg-emerald-50/10 border-emerald-500/20 group-hover:bg-emerald-500/20',
+                            'w-11 h-11 rounded-full border flex items-center justify-center transition-colors',
+                            isEmpty ? 'bg-slate-50 border-slate-100' : iconBg,
                           ].join(' ')}>
                             {icon}
                           </div>
 
                           {isEmpty ? (
-                            <span className="text-[11px] font-semibold text-slate-400 bg-slate-700/60 px-2.5 py-0.5 rounded-full border border-slate-600/40">
+                            <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
                               Bientôt disponible
                             </span>
                           ) : (
-                            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                               {count} offre{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
 
-                        <h3 className={[
-                          'text-base font-semibold mb-1 transition-colors',
-                          isEmpty ? 'text-slate-400' : 'text-white group-hover:text-emerald-400',
-                        ].join(' ')}>
+                        <h3 className="text-base font-semibold mb-1 text-slate-900 transition-colors group-hover:text-emerald-700">
                           {label}
                         </h3>
                         <p className="text-xs text-slate-500 leading-relaxed">
@@ -189,7 +193,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                         </p>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs font-semibold mt-4 text-emerald-500 group-hover:text-emerald-400">
+                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold mt-4 text-emerald-600 group-hover:text-emerald-700">
                         <span>Découvrir les institutions</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
