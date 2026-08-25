@@ -78,6 +78,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [isAddingNewCompany, setIsAddingNewCompany] = useState(false);
   const [isCreatingCompany, setIsCreatingCompany] = useState(false);
   const [newCompanyForm, setNewCompanyForm] = useState({ companyName: '', ville: '', secteur: '', website: '' });
+  const [newCompanyLogoFile, setNewCompanyLogoFile] = useState<File | null>(null);
+  const [newCompanyLogoPreview, setNewCompanyLogoPreview] = useState<string | null>(null);
+  const newCompanyLogoInputRef = useRef<HTMLInputElement>(null);
 
   const loadCompanies = async () => {
     setIsLoadingCompanies(true);
@@ -157,6 +160,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setLogoFile(null);
     setLogoPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ─── Logo upload (nouvelle institution) ────────────────────────────────────
+
+  const NEW_COMPANY_LOGO_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+
+  const handleNewCompanyLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!NEW_COMPANY_LOGO_ACCEPTED_TYPES.includes(file.type)) {
+      alert('Format non supporté. Utilisez PNG, JPG, SVG ou WebP.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le logo ne doit pas dépasser 2 Mo.');
+      return;
+    }
+
+    setNewCompanyLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setNewCompanyLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveNewCompanyLogo = () => {
+    setNewCompanyLogoFile(null);
+    setNewCompanyLogoPreview(null);
+    if (newCompanyLogoInputRef.current) newCompanyLogoInputRef.current.value = '';
   };
 
   // ─── LinkedIn parser ────────────────────────────────────────────────────────
@@ -240,6 +273,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setSelectedCompanyId('');
     setIsAddingNewCompany(false);
     setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
+    handleRemoveNewCompanyLogo();
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -403,8 +437,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setIsCreatingCompany(true);
     try {
       let logoUrl: string | undefined;
-      if (logoFile) {
-        logoUrl = await uploadLogo(logoFile);
+      let logoUploadFailed = false;
+      if (newCompanyLogoFile) {
+        try {
+          logoUrl = await uploadLogo(newCompanyLogoFile);
+        } catch (logoErr) {
+          logoUploadFailed = true;
+          console.error('Erreur upload logo institution:', logoErr);
+        }
       }
       const created = await createCompany({
         companyName: newCompanyForm.companyName.trim(),
@@ -418,6 +458,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       handleSelectExistingCompany(created.id);
       setIsAddingNewCompany(false);
       setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
+      handleRemoveNewCompanyLogo();
+      if (logoUploadFailed) {
+        alert("Institution créée, mais le logo n'a pas pu être envoyé. Vous pourrez réessayer plus tard.");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Erreur lors de la création de l'institution : ${msg}`);
@@ -974,6 +1018,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             setFormData(prev => ({ ...prev, company: '' }));
                             setDuplicatedLogoUrl(null);
                             setLogoPreview(null);
+                            handleRemoveNewCompanyLogo();
                           }}
                           className="text-xs font-semibold text-slate-500 hover:text-slate-700"
                         >
@@ -1000,6 +1045,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               setFormData(prev => ({ ...prev, company: '' }));
                               setDuplicatedLogoUrl(null);
                               setLogoPreview(null);
+                              handleRemoveNewCompanyLogo();
                             }}
                             className={`text-left p-4 rounded-xl border-2 transition-all ${
                               isSelected
@@ -1084,6 +1130,48 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
                               />
                             </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Logo (optionnel)</label>
+                              <div className="flex items-center gap-3">
+                                <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {newCompanyLogoPreview ? (
+                                    <img src={newCompanyLogoPreview} alt="Aperçu logo" className="w-full h-full object-contain p-1" />
+                                  ) : (
+                                    <ImageIcon className="w-5 h-5 text-slate-400" />
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <input
+                                    ref={newCompanyLogoInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                    onChange={handleNewCompanyLogoChange}
+                                    className="hidden"
+                                    id="new-company-logo-upload"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <label
+                                      htmlFor="new-company-logo-upload"
+                                      className="inline-flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
+                                    >
+                                      <Upload className="w-3.5 h-3.5" />
+                                      Choisir un logo
+                                    </label>
+                                    {newCompanyLogoFile && (
+                                      <button
+                                        type="button"
+                                        onClick={handleRemoveNewCompanyLogo}
+                                        className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        Supprimer
+                                      </button>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-400">PNG, JPG, SVG, WebP · Max 2 Mo</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
@@ -1097,7 +1185,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setIsAddingNewCompany(false)}
+                              onClick={() => { setIsAddingNewCompany(false); handleRemoveNewCompanyLogo(); }}
                               className="text-xs font-semibold text-slate-500 hover:text-slate-700"
                             >
                               Annuler
