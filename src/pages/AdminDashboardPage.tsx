@@ -77,7 +77,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [isAddingNewCompany, setIsAddingNewCompany] = useState(false);
   const [isCreatingCompany, setIsCreatingCompany] = useState(false);
-  const [newCompanyForm, setNewCompanyForm] = useState({ companyName: '', ville: '', secteur: '', website: '' });
+  const [newCompanyForm, setNewCompanyForm] = useState({ companyName: '', ville: '', secteur: '', description: '', website: '' });
   const [newCompanyLogoFile, setNewCompanyLogoFile] = useState<File | null>(null);
   const [newCompanyLogoPreview, setNewCompanyLogoPreview] = useState<string | null>(null);
   const newCompanyLogoInputRef = useRef<HTMLInputElement>(null);
@@ -272,7 +272,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setSelectedCategory('');
     setSelectedCompanyId('');
     setIsAddingNewCompany(false);
-    setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
+    setNewCompanyForm({ companyName: '', ville: '', secteur: '', description: '', website: '' });
     handleRemoveNewCompanyLogo();
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -452,12 +452,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         logoUrl,
         ville: newCompanyForm.ville || undefined,
         secteur: newCompanyForm.secteur || undefined,
+        description: newCompanyForm.description.trim() || undefined,
         website: newCompanyForm.website || undefined,
       });
       setCompanies(prev => [created, ...prev]);
       handleSelectExistingCompany(created.id);
       setIsAddingNewCompany(false);
-      setNewCompanyForm({ companyName: '', ville: '', secteur: '', website: '' });
+      setNewCompanyForm({ companyName: '', ville: '', secteur: '', description: '', website: '' });
       handleRemoveNewCompanyLogo();
       if (logoUploadFailed) {
         alert("Institution créée, mais le logo n'a pas pu être envoyé. Vous pourrez réessayer plus tard.");
@@ -1119,6 +1120,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 onChange={(e) => setNewCompanyForm(prev => ({ ...prev, secteur: e.target.value }))}
                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
                               />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Description (optionnel)</label>
+                              <textarea
+                                rows={3}
+                                maxLength={300}
+                                value={newCompanyForm.description}
+                                onChange={(e) => setNewCompanyForm(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Courte présentation de l'institution (activité, mission, chiffres clés...)"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white resize-none"
+                              />
+                              <p className="text-[11px] text-slate-400 mt-1 text-right">{newCompanyForm.description.length}/300</p>
                             </div>
                             <div className="sm:col-span-2">
                               <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Site web (optionnel)</label>

@@ -57,6 +57,7 @@ export const createCompany = async (payload: {
   ville?: string;
   secteur?: string;
   website?: string;
+  description?: string;
 }): Promise<Company> => {
   const baseSlug = slugify(payload.companyName) || 'institution';
   let slug = baseSlug;
@@ -73,6 +74,7 @@ export const createCompany = async (payload: {
         ville: payload.ville ?? null,
         secteur: payload.secteur ?? null,
         website: payload.website ?? null,
+        description: payload.description ?? null,
         verification_status: 'verified',
       }])
       .select()
