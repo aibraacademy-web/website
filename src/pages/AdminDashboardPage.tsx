@@ -315,8 +315,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedCompanyId) {
-      alert("Veuillez sélectionner une catégorie et une institution avant de publier l'offre.");
+    if (selectedCategory && !selectedCompanyId) {
+      alert("Vous avez choisi une catégorie : sélectionnez une institution, ou annulez pour publier une offre simple.");
       return;
     }
 
@@ -337,7 +337,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       const created = await createJobOffer({
         title: formData.title,
         company: formData.company,
-        companyId: selectedCompanyId,
+        companyId: selectedCompanyId || undefined,
         companyInitials: initials,
         companyLogo: logoUrl,
         category: formData.category,
@@ -948,16 +948,39 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   )}
                 </div>
 
-                {/* Section: Institution (flow séquentiel) */}
+                {/* Section: Institution (optionnelle) */}
                 <div className="space-y-4 pb-6 border-b border-slate-200">
-                  <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-emerald-600" />
-                    1. Institution
-                  </h2>
-
-                  {/* Étape 1 : catégorie */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Catégorie</label>
+                    <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-emerald-600" />
+                      Institution
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Cette offre est-elle liée à une institution connue ? (optionnel — réservé aux institutions notables comme Marjane, une banque, l'OFPPT...)
+                    </p>
+                  </div>
+
+                  {/* Catégorie */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-slate-700 uppercase">Catégorie</label>
+                      {selectedCategory && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory('');
+                            setSelectedCompanyId('');
+                            setIsAddingNewCompany(false);
+                            setFormData(prev => ({ ...prev, company: '' }));
+                            setDuplicatedLogoUrl(null);
+                            setLogoPreview(null);
+                          }}
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                        >
+                          Annuler / Offre simple
+                        </button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {COMPANY_CATEGORIES.map(meta => {
                         const Icon = meta.value === 'ecole' ? BookOpen : meta.value === 'etat' ? Landmark : Building2;
@@ -967,9 +990,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             key={meta.value}
                             type="button"
                             onClick={() => {
-                              setSelectedCategory(meta.value);
+                              if (isSelected) {
+                                setSelectedCategory('');
+                              } else {
+                                setSelectedCategory(meta.value);
+                              }
                               setSelectedCompanyId('');
                               setIsAddingNewCompany(false);
+                              setFormData(prev => ({ ...prev, company: '' }));
+                              setDuplicatedLogoUrl(null);
+                              setLogoPreview(null);
                             }}
                             className={`text-left p-4 rounded-xl border-2 transition-all ${
                               isSelected
@@ -1086,17 +1116,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   )}
                 </div>
 
-                {!selectedCompanyId ? (
-                  <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500 text-center">
-                    Sélectionnez une catégorie puis une institution pour continuer.
-                  </div>
-                ) : (
-                <>
                 {/* Section: Informations du poste */}
                 <div className="space-y-4 pb-6 border-b border-slate-200">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-emerald-600" />
-                    2. Informations du poste
+                    Informations du poste
                   </h2>
 
                   {/* Logo Upload */}
@@ -1154,10 +1178,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Institution</label>
-                      <div className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 font-medium">
-                        {formData.company}
-                      </div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Entreprise</label>
+                      {selectedCompanyId ? (
+                        <div className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 font-medium">
+                          {formData.company}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={formData.company}
+                          onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                          placeholder="Nom de l'entreprise"
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500"
+                        />
+                      )}
                     </div>
 
                     <div>
@@ -1183,7 +1217,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="space-y-4 pb-6 border-b border-slate-200">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-emerald-600" />
-                    3. Caractéristiques
+                    Caractéristiques
                   </h2>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1230,7 +1264,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="space-y-4">
                   <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
                     <FileText className="w-5 h-5 text-emerald-600" />
-                    4. Description complète de l'offre
+                    Description complète de l'offre
                   </h2>
 
                   <div>
@@ -1256,7 +1290,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <div className="pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !selectedCompanyId}
+                    disabled={isSubmitting || (!!selectedCategory && !selectedCompanyId)}
                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 transition-all"
                   >
                     {isSubmitting ? (
@@ -1272,8 +1306,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     )}
                   </button>
                 </div>
-                </>
-                )}
 
               </form>
             )}
