@@ -4,10 +4,7 @@ import { Company, JobOffer, dbToJobOffer, DbJobOffer, DbCompany, dbToCompany, Co
 export const getCompanyProfile = async (userId: string): Promise<Company | null> => {
   const { data, error } = await supabase
     .from('companies')
-    .select(`
-      *,
-      profiles ( role, created_at )
-    `)
+    .select('*')
     .eq('id', userId)
     .single();
 
@@ -18,8 +15,7 @@ export const getCompanyProfile = async (userId: string): Promise<Company | null>
     return null;
   }
 
-  const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
-  return dbToCompany(data as DbCompany, profile);
+  return dbToCompany(data as DbCompany);
 };
 
 /** Récupère une entreprise/institution publique par son slug */
@@ -49,7 +45,21 @@ const slugify = (text: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-/** Crée une nouvelle institution (entreprise/école/état), action Admin uniquement */
+/** Normalise un nom d'institution pour la comparaison (accents, casse, espaces) */
+export const normalizeCompanyName = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(DIACRITICS_REGEX, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+/**
+ * Crée une nouvelle institution (entreprise/école/état), action Admin uniquement.
+ * Réutilise une institution existante de même catégorie/nom (normalisé) plutôt que
+ * de créer un doublon — vérification faite ici, seul point d'entrée d'insertion,
+ * pas seulement côté UI.
+ */
 export const createCompany = async (payload: {
   companyName: string;
   category: CompanyCategory;
@@ -58,7 +68,39 @@ export const createCompany = async (payload: {
   secteur?: string;
   website?: string;
   description?: string;
-}): Promise<Company> => {
+}): Promise<{ company: Company; reused: boolean }> => {
+  const normalizedTarget = normalizeCompanyName(payload.companyName);
+
+  const { data: sameCategoryRows, error: lookupError } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('category', payload.category);
+
+  if (lookupError) {
+    throw new Error(`Erreur lors de la vérification des doublons: ${lookupError.message}`);
+  }
+
+  const existingRow = (sameCategoryRows || []).find(
+    row => normalizeCompanyName((row as DbCompany).company_name) === normalizedTarget
+  ) as DbCompany | undefined;
+
+  if (existingRow) {
+    // Réutilise l'institution existante ; complète son logo si elle n'en a pas encore.
+    if (payload.logoUrl && !existingRow.logo_url) {
+      const { data: updated, error: updateError } = await supabase
+        .from('companies')
+        .update({ logo_url: payload.logoUrl })
+        .eq('id', existingRow.id)
+        .select()
+        .single();
+
+      if (!updateError && updated) {
+        return { company: dbToCompany(updated as DbCompany), reused: true };
+      }
+    }
+    return { company: dbToCompany(existingRow), reused: true };
+  }
+
   const baseSlug = slugify(payload.companyName) || 'institution';
   let slug = baseSlug;
   let attempt = 0;
@@ -81,7 +123,7 @@ export const createCompany = async (payload: {
       .single();
 
     if (!error && data) {
-      return dbToCompany(data as DbCompany);
+      return { company: dbToCompany(data as DbCompany), reused: false };
     }
 
     if (error?.code === '23505') {
@@ -148,10 +190,7 @@ export const getCompanyJobs = async (companyId: string): Promise<JobOffer[]> => 
 export const fetchAllCompanies = async (): Promise<Company[]> => {
   const { data, error } = await supabase
     .from('companies')
-    .select(`
-      *,
-      profiles ( role, created_at )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -159,10 +198,7 @@ export const fetchAllCompanies = async (): Promise<Company[]> => {
     return [];
   }
 
-  return (data || []).map(row => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    return dbToCompany(row as DbCompany, profile);
-  });
+  return (data || []).map(row => dbToCompany(row as DbCompany));
 };
 
 /** Valide ou rejette le statut d'une entreprise (Action Admin) */

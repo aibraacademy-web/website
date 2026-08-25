@@ -2,7 +2,7 @@ import React from 'react';
 import { Company, JobOffer, CompanyCategory } from '../types';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { getCompanyCategoryMeta } from '../lib/companyCategories';
-import { Building2, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { Building2, ArrowRight, ArrowUpRight, MapPin } from 'lucide-react';
 
 interface CategoryPageProps {
   category: CompanyCategory;
@@ -36,7 +36,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   const totalOffers = categoryCompanies.reduce((acc, c) => acc + c.count, 0);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-950">
       {/* Header */}
       <div className="bg-slate-900 border-b border-slate-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,54 +72,69 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
             <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : categoryCompanies.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-            <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">Aucune institution enregistrée dans cette catégorie pour le moment.</p>
+          <div className="text-center py-16 bg-slate-900 rounded-2xl border border-slate-800">
+            <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-400 font-medium">Aucune institution enregistrée dans cette catégorie pour le moment.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {categoryCompanies.map(({ company, count }) => {
               const isEmpty = count === 0;
+              const subtitle = company.secteur || company.description;
               return (
                 <button
                   key={company.id}
                   onClick={() => company.slug && onSelectCompany(company.slug)}
                   disabled={!company.slug}
-                  className="group text-left bg-white p-5 rounded-xl border border-slate-200 hover:border-emerald-400 hover:shadow-md transition-all duration-200 flex flex-col justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={[
+                    'group text-left p-6 rounded-2xl border transition-all duration-200 flex flex-col justify-between disabled:cursor-not-allowed',
+                    isEmpty
+                      ? 'bg-slate-900/60 border-slate-800 opacity-70 hover:opacity-100 disabled:opacity-60'
+                      : 'bg-slate-800 border-slate-700 hover:border-emerald-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/5',
+                  ].join(' ')}
                 >
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-start gap-4 mb-5">
                     {company.logoUrl ? (
                       <img
                         src={company.logoUrl}
                         alt={company.companyName}
-                        className="w-12 h-12 rounded-lg object-contain bg-white border border-slate-200 p-1 shrink-0"
+                        className="w-16 h-16 rounded-xl object-contain bg-white border border-slate-700 p-1.5 shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-emerald-600 text-white font-bold text-xl flex items-center justify-center shrink-0">
                         {company.companyName.substring(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                    <div className="min-w-0 pt-1">
+                      <h3 className={[
+                        'font-semibold text-base leading-snug transition-colors truncate',
+                        isEmpty ? 'text-slate-400' : 'text-white group-hover:text-emerald-400',
+                      ].join(' ')}>
                         {company.companyName}
                       </h3>
                       {company.ville && (
-                        <p className="text-xs text-slate-500 truncate">{company.ville}</p>
+                        <p className="flex items-center gap-1 text-xs text-slate-400 mt-1 truncate">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          {company.ville}
+                        </p>
+                      )}
+                      {subtitle && (
+                        <p className="text-xs text-slate-500 mt-1.5 truncate">{subtitle}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between">
                     {isEmpty ? (
-                      <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
-                        Bientôt disponible
+                      <span className="text-[11px] font-semibold text-slate-400 bg-slate-700/60 px-2.5 py-0.5 rounded-full border border-slate-600/40">
+                        Aucune offre pour le moment
                       </span>
                     ) : (
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        {count} offre{count > 1 ? 's' : ''}
+                      <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                        {count} offre{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}
                       </span>
                     )}
-                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
                   </div>
                 </button>
               );

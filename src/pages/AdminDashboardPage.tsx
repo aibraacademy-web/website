@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { JobOffer, JobCategory, MoroccanCity, ContractType, Company, CompanyCategory } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
-import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany } from '../services/companyService';
+import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany, normalizeCompanyName } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
@@ -76,6 +76,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | ''>('');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [isAddingNewCompany, setIsAddingNewCompany] = useState(false);
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
+  const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
   const [isCreatingCompany, setIsCreatingCompany] = useState(false);
   const [newCompanyForm, setNewCompanyForm] = useState({ companyName: '', ville: '', secteur: '', description: '', website: '' });
   const [newCompanyLogoFile, setNewCompanyLogoFile] = useState<File | null>(null);
@@ -411,22 +413,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // ─── Sélection / création d'institution (formulaire Ajouter) ────────────────
 
-  const handleSelectExistingCompany = (companyId: string) => {
-    setSelectedCompanyId(companyId);
+  const applySelectedCompany = (company: Company) => {
+    setSelectedCompanyId(company.id);
     setIsAddingNewCompany(false);
-    const company = companies.find(c => c.id === companyId);
-    if (company) {
-      setFormData(prev => ({ ...prev, company: company.companyName }));
-      if (company.logoUrl) {
-        setDuplicatedLogoUrl(company.logoUrl);
-        setLogoPreview(company.logoUrl);
-      } else {
-        setDuplicatedLogoUrl(null);
-        setLogoPreview(null);
-      }
-      setLogoFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    setCompanySearchQuery('');
+    setIsCompanyDropdownOpen(false);
+    setFormData(prev => ({ ...prev, company: company.companyName }));
+    if (company.logoUrl) {
+      setDuplicatedLogoUrl(company.logoUrl);
+      setLogoPreview(company.logoUrl);
+    } else {
+      setDuplicatedLogoUrl(null);
+      setLogoPreview(null);
     }
+    setLogoFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSelectExistingCompany = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    if (company) applySelectedCompany(company);
   };
 
   const handleCreateCompany = async () => {
@@ -446,7 +452,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           console.error('Erreur upload logo institution:', logoErr);
         }
       }
-      const created = await createCompany({
+      const { company: created, reused } = await createCompany({
         companyName: newCompanyForm.companyName.trim(),
         category: selectedCategory,
         logoUrl,
@@ -455,12 +461,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         description: newCompanyForm.description.trim() || undefined,
         website: newCompanyForm.website || undefined,
       });
-      setCompanies(prev => [created, ...prev]);
-      handleSelectExistingCompany(created.id);
-      setIsAddingNewCompany(false);
+      setCompanies(prev => reused ? prev.map(c => (c.id === created.id ? created : c)) : [created, ...prev]);
+      applySelectedCompany(created);
       setNewCompanyForm({ companyName: '', ville: '', secteur: '', description: '', website: '' });
       handleRemoveNewCompanyLogo();
-      if (logoUploadFailed) {
+      if (reused) {
+        alert(`Une institution similaire existe déjà : ${created.companyName} — sélectionnée automatiquement.`);
+      } else if (logoUploadFailed) {
         alert("Institution créée, mais le logo n'a pas pu être envoyé. Vous pourrez réessayer plus tard.");
       }
     } catch (err: unknown) {
@@ -1016,6 +1023,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             setSelectedCategory('');
                             setSelectedCompanyId('');
                             setIsAddingNewCompany(false);
+                            setCompanySearchQuery('');
+                            setIsCompanyDropdownOpen(false);
                             setFormData(prev => ({ ...prev, company: '' }));
                             setDuplicatedLogoUrl(null);
                             setLogoPreview(null);
@@ -1043,6 +1052,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               }
                               setSelectedCompanyId('');
                               setIsAddingNewCompany(false);
+                              setCompanySearchQuery('');
+                              setIsCompanyDropdownOpen(false);
                               setFormData(prev => ({ ...prev, company: '' }));
                               setDuplicatedLogoUrl(null);
                               setLogoPreview(null);
@@ -1073,24 +1084,66 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       </label>
 
                       {!isAddingNewCompany ? (
-                        <select
-                          value={selectedCompanyId}
-                          onChange={(e) => {
-                            if (e.target.value === '__new__') {
-                              setIsAddingNewCompany(true);
-                              setSelectedCompanyId('');
-                            } else {
-                              handleSelectExistingCompany(e.target.value);
-                            }
-                          }}
-                          className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
-                        >
-                          <option value="" disabled>Sélectionner une institution</option>
-                          {companies.filter(c => c.category === selectedCategory).map(c => (
-                            <option key={c.id} value={c.id}>{c.companyName}</option>
-                          ))}
-                          <option value="__new__">+ Ajouter une nouvelle institution</option>
-                        </select>
+                        (() => {
+                          const categoryCompanies = companies.filter(c => c.category === selectedCategory);
+                          const query = normalizeCompanyName(companySearchQuery);
+                          const matches = query
+                            ? categoryCompanies.filter(c => normalizeCompanyName(c.companyName).includes(query))
+                            : categoryCompanies;
+                          return (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={selectedCompanyId ? formData.company : companySearchQuery}
+                                onChange={(e) => {
+                                  setSelectedCompanyId('');
+                                  setCompanySearchQuery(e.target.value);
+                                  setIsCompanyDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsCompanyDropdownOpen(true)}
+                                onBlur={() => setTimeout(() => setIsCompanyDropdownOpen(false), 150)}
+                                placeholder="Rechercher une institution (ex: OFPPT)..."
+                                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                              />
+                              {isCompanyDropdownOpen && (
+                                <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                                  {matches.length > 0 ? (
+                                    matches.map(c => (
+                                      <button
+                                        key={c.id}
+                                        type="button"
+                                        onMouseDown={() => handleSelectExistingCompany(c.id)}
+                                        className="w-full text-left px-3.5 py-2 text-sm text-slate-800 hover:bg-emerald-50 flex items-center gap-2"
+                                      >
+                                        {c.logoUrl ? (
+                                          <img src={c.logoUrl} alt="" className="w-5 h-5 rounded object-contain bg-white border border-slate-200 shrink-0" />
+                                        ) : (
+                                          <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        )}
+                                        {c.companyName}
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <p className="px-3.5 py-2 text-xs text-slate-400">Aucune institution existante ne correspond.</p>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onMouseDown={() => {
+                                      setIsAddingNewCompany(true);
+                                      setSelectedCompanyId('');
+                                      setNewCompanyForm(prev => ({ ...prev, companyName: companySearchQuery.trim() }));
+                                      setIsCompanyDropdownOpen(false);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-t border-slate-100 flex items-center gap-1.5"
+                                  >
+                                    <PlusCircle className="w-3.5 h-3.5" />
+                                    + Ajouter une nouvelle institution{companySearchQuery.trim() ? ` "${companySearchQuery.trim()}"` : ''}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
