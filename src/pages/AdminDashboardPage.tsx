@@ -99,6 +99,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [isSavingCompanyEdit, setIsSavingCompanyEdit] = useState(false);
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
 
+  // Création d'une institution directement depuis l'onglet Institutions
+  const [isCreatingInstitution, setIsCreatingInstitution] = useState(false);
+  const [newInstitutionForm, setNewInstitutionForm] = useState({ companyName: '', ville: '', secteur: '', description: '', website: '', category: '' as CompanyCategory | '' });
+  const [newInstitutionLogoFile, setNewInstitutionLogoFile] = useState<File | null>(null);
+  const [newInstitutionLogoPreview, setNewInstitutionLogoPreview] = useState<string | null>(null);
+  const newInstitutionLogoInputRef = useRef<HTMLInputElement>(null);
+  const [isSavingNewInstitution, setIsSavingNewInstitution] = useState(false);
+
   const loadCompanies = async () => {
     setIsLoadingCompanies(true);
     try {
@@ -684,6 +692,91 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
+  const openCreateInstitution = () => {
+    setNewInstitutionForm({ companyName: '', ville: '', secteur: '', description: '', website: '', category: '' });
+    setNewInstitutionLogoFile(null);
+    setNewInstitutionLogoPreview(null);
+    setIsCreatingInstitution(true);
+  };
+
+  const closeCreateInstitution = () => {
+    setIsCreatingInstitution(false);
+    setNewInstitutionLogoFile(null);
+    setNewInstitutionLogoPreview(null);
+    if (newInstitutionLogoInputRef.current) newInstitutionLogoInputRef.current.value = '';
+  };
+
+  const handleNewInstitutionLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!EDIT_COMPANY_LOGO_ACCEPTED_TYPES.includes(file.type)) {
+      alert('Format non supporté. Utilisez PNG, JPG, SVG ou WebP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le logo ne doit pas dépasser 2 Mo.');
+      return;
+    }
+
+    setNewInstitutionLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setNewInstitutionLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveNewInstitutionLogo = () => {
+    setNewInstitutionLogoFile(null);
+    setNewInstitutionLogoPreview(null);
+    if (newInstitutionLogoInputRef.current) newInstitutionLogoInputRef.current.value = '';
+  };
+
+  const handleCreateInstitution = async () => {
+    if (!newInstitutionForm.category) {
+      alert('Veuillez choisir une catégorie.');
+      return;
+    }
+    if (!newInstitutionForm.companyName.trim()) {
+      alert("Le nom de l'institution est requis.");
+      return;
+    }
+
+    setIsSavingNewInstitution(true);
+    try {
+      let logoUrl: string | undefined;
+      let logoUploadFailed = false;
+      if (newInstitutionLogoFile) {
+        try {
+          logoUrl = await uploadLogo(newInstitutionLogoFile);
+        } catch (logoErr) {
+          logoUploadFailed = true;
+          console.error('Erreur upload logo institution:', logoErr);
+        }
+      }
+      const { company: created, reused } = await createCompany({
+        companyName: newInstitutionForm.companyName.trim(),
+        category: newInstitutionForm.category,
+        logoUrl,
+        ville: newInstitutionForm.ville || undefined,
+        secteur: newInstitutionForm.secteur || undefined,
+        description: newInstitutionForm.description.trim() || undefined,
+        website: newInstitutionForm.website || undefined,
+      });
+      setCompanies(prev => reused ? prev.map(c => (c.id === created.id ? created : c)) : [created, ...prev]);
+      closeCreateInstitution();
+      if (reused) {
+        alert(`Une institution similaire existe déjà : ${created.companyName}.`);
+      } else if (logoUploadFailed) {
+        alert("Institution créée, mais le logo n'a pas pu être envoyé. Vous pourrez réessayer plus tard.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Erreur lors de la création de l'institution : ${msg}`);
+    } finally {
+      setIsSavingNewInstitution(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -764,9 +857,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <h2 className="text-xl font-bold text-slate-900">Institutions</h2>
                 <p className="text-sm text-slate-500 mt-1">Écoles, entreprises et institutions publiques : liste, modification et validation ICE.</p>
               </div>
-              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
-                {companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length} en attente
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                  {companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length} en attente
+                </span>
+                <button
+                  onClick={openCreateInstitution}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Nouvelle institution
+                </button>
+              </div>
             </div>
 
             {/* Recherche + filtre catégorie */}
@@ -1690,6 +1792,166 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         )}
 
       </div>
+
+      {/* Modal: Création d'une institution */}
+      {isCreatingInstitution && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900">
+            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 font-serif">Nouvelle institution</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Créer une institution sans passer par une offre</p>
+              </div>
+              <button
+                onClick={closeCreateInstitution}
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"
+                aria-label="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Catégorie</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {COMPANY_CATEGORIES.map(meta => {
+                    const Icon = meta.value === 'ecole' ? BookOpen : meta.value === 'etat' ? Landmark : Building2;
+                    const isSelected = newInstitutionForm.category === meta.value;
+                    return (
+                      <button
+                        key={meta.value}
+                        type="button"
+                        onClick={() => setNewInstitutionForm(prev => ({ ...prev, category: meta.value }))}
+                        className={`text-left p-2.5 rounded-xl border-2 transition-all ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      >
+                        <Icon className={`w-4 h-4 mb-1 ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`} />
+                        <p className={`text-xs font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>{meta.shortLabel}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nom de l'institution</label>
+                <input
+                  type="text"
+                  value={newInstitutionForm.companyName}
+                  onChange={(e) => setNewInstitutionForm(prev => ({ ...prev, companyName: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ville</label>
+                  <input
+                    type="text"
+                    value={newInstitutionForm.ville}
+                    onChange={(e) => setNewInstitutionForm(prev => ({ ...prev, ville: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Secteur</label>
+                  <input
+                    type="text"
+                    value={newInstitutionForm.secteur}
+                    onChange={(e) => setNewInstitutionForm(prev => ({ ...prev, secteur: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={newInstitutionForm.description}
+                  onChange={(e) => setNewInstitutionForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white resize-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1 text-right">{newInstitutionForm.description.length}/300</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Site web</label>
+                <input
+                  type="url"
+                  value={newInstitutionForm.website}
+                  onChange={(e) => setNewInstitutionForm(prev => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Logo</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {newInstitutionLogoPreview ? (
+                      <img src={newInstitutionLogoPreview} alt="Aperçu logo" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <input
+                      ref={newInstitutionLogoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={handleNewInstitutionLogoChange}
+                      className="hidden"
+                      id="new-institution-logo-upload"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="new-institution-logo-upload"
+                        className="inline-flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        {newInstitutionLogoPreview ? 'Remplacer le logo' : 'Choisir un logo'}
+                      </label>
+                      {newInstitutionLogoPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveNewInstitutionLogo}
+                          className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-3 h-3" />
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">PNG, JPG, SVG, WebP · Max 2 Mo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeCreateInstitution}
+                className="px-4 py-2.5 text-slate-600 hover:text-slate-900 text-sm font-semibold rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateInstitution}
+                disabled={isSavingNewInstitution || !newInstitutionForm.companyName.trim() || !newInstitutionForm.category}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold transition-all shadow-sm"
+              >
+                {isSavingNewInstitution ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Créer l'institution
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Édition d'une institution */}
       {editingCompany && (
