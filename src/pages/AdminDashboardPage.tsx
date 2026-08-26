@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { JobOffer, JobCategory, MoroccanCity, ContractType, Company, CompanyCategory } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
-import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany, normalizeCompanyName } from '../services/companyService';
+import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany, updateCompany, deleteCompany, normalizeCompanyName } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { getApplicationCounts, ApplicationCounts } from '../services/applicationService';
 import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
-import { COMPANY_CATEGORIES } from '../lib/companyCategories';
+import { COMPANY_CATEGORIES, getCompanyCategoryMeta } from '../lib/companyCategories';
 import {
   PlusCircle,
   Building2,
@@ -34,7 +34,10 @@ import {
   Copy,
   BookOpen,
   Landmark,
-  ChevronRight
+  ChevronRight,
+  Search,
+  Pencil,
+  Save
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -84,6 +87,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [newCompanyLogoFile, setNewCompanyLogoFile] = useState<File | null>(null);
   const [newCompanyLogoPreview, setNewCompanyLogoPreview] = useState<string | null>(null);
   const newCompanyLogoInputRef = useRef<HTMLInputElement>(null);
+
+  // Gestion des institutions (liste, recherche, édition, suppression)
+  const [institutionSearchQuery, setInstitutionSearchQuery] = useState('');
+  const [institutionCategoryFilter, setInstitutionCategoryFilter] = useState<CompanyCategory | 'all'>('all');
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [editCompanyForm, setEditCompanyForm] = useState({ companyName: '', ville: '', secteur: '', description: '', website: '', category: '' as CompanyCategory | '' });
+  const [editCompanyLogoFile, setEditCompanyLogoFile] = useState<File | null>(null);
+  const [editCompanyLogoPreview, setEditCompanyLogoPreview] = useState<string | null>(null);
+  const editCompanyLogoInputRef = useRef<HTMLInputElement>(null);
+  const [isSavingCompanyEdit, setIsSavingCompanyEdit] = useState(false);
+  const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
 
   const loadCompanies = async () => {
     setIsLoadingCompanies(true);
@@ -550,6 +564,126 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
+  // ─── Gestion des institutions (édition / suppression) ──────────────────────
+
+  const getCompanyJobCount = (companyId: string) => jobs.filter(j => j.companyId === companyId).length;
+
+  const EDIT_COMPANY_LOGO_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+
+  const handleEditCompanyLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!EDIT_COMPANY_LOGO_ACCEPTED_TYPES.includes(file.type)) {
+      alert('Format non supporté. Utilisez PNG, JPG, SVG ou WebP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Le logo ne doit pas dépasser 2 Mo.');
+      return;
+    }
+
+    setEditCompanyLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setEditCompanyLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveEditCompanyLogo = () => {
+    setEditCompanyLogoFile(null);
+    setEditCompanyLogoPreview(null);
+    if (editCompanyLogoInputRef.current) editCompanyLogoInputRef.current.value = '';
+  };
+
+  const openEditCompany = (company: Company) => {
+    setEditingCompany(company);
+    setEditCompanyForm({
+      companyName: company.companyName,
+      ville: company.ville || '',
+      secteur: company.secteur || '',
+      description: company.description || '',
+      website: company.website || '',
+      category: company.category || '',
+    });
+    setEditCompanyLogoFile(null);
+    setEditCompanyLogoPreview(company.logoUrl || null);
+  };
+
+  const closeEditCompany = () => {
+    setEditingCompany(null);
+    setEditCompanyLogoFile(null);
+    setEditCompanyLogoPreview(null);
+    if (editCompanyLogoInputRef.current) editCompanyLogoInputRef.current.value = '';
+  };
+
+  const handleSaveCompanyEdit = async () => {
+    if (!editingCompany) return;
+    if (!editCompanyForm.companyName.trim()) {
+      alert("Le nom de l'institution est requis.");
+      return;
+    }
+
+    const jobCount = getCompanyJobCount(editingCompany.id);
+    const categoryChanged = editCompanyForm.category && editCompanyForm.category !== editingCompany.category;
+    if (categoryChanged && jobCount > 0) {
+      const confirmChange = window.confirm(
+        `Cette institution a ${jobCount} offre(s) liée(s). Changer sa catégorie affectera son affichage sur /categories/${editingCompany.category} et /categories/${editCompanyForm.category}. Continuer ?`
+      );
+      if (!confirmChange) return;
+    }
+
+    setIsSavingCompanyEdit(true);
+    try {
+      let logoUrl: string | null | undefined;
+      if (editCompanyLogoFile) {
+        logoUrl = await uploadLogo(editCompanyLogoFile);
+        if (editingCompany.logoUrl) await deleteLogo(editingCompany.logoUrl);
+      } else if (editCompanyLogoPreview === null && editingCompany.logoUrl) {
+        logoUrl = null;
+        await deleteLogo(editingCompany.logoUrl);
+      }
+
+      const updated = await updateCompany(editingCompany.id, {
+        companyName: editCompanyForm.companyName.trim(),
+        category: editCompanyForm.category || undefined,
+        logoUrl,
+        ville: editCompanyForm.ville || undefined,
+        secteur: editCompanyForm.secteur || undefined,
+        description: editCompanyForm.description.trim() || undefined,
+        website: editCompanyForm.website || undefined,
+      });
+
+      setCompanies(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+      closeEditCompany();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Erreur lors de la modification de l'institution : ${msg}`);
+    } finally {
+      setIsSavingCompanyEdit(false);
+    }
+  };
+
+  const handleDeleteCompany = async (company: Company) => {
+    const jobCount = getCompanyJobCount(company.id);
+    if (jobCount > 0) {
+      alert(`Impossible de supprimer "${company.companyName}" : ${jobCount} offre(s) y sont encore liée(s). Réattribuez ou supprimez ces offres avant de pouvoir supprimer l'institution.`);
+      return;
+    }
+    if (!window.confirm(`Voulez-vous vraiment supprimer l'institution "${company.companyName}" ? Cette action est irréversible.`)) return;
+
+    setDeletingCompanyId(company.id);
+    try {
+      if (company.logoUrl) await deleteLogo(company.logoUrl);
+      await deleteCompany(company.id);
+      setCompanies(prev => prev.filter(c => c.id !== company.id));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Erreur lors de la suppression : ${msg}`);
+    } finally {
+      setDeletingCompanyId(null);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -602,7 +736,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'companies' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <Building2 className="w-4 h-4" />
-                Entreprises ({companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length})
+                Institutions ({companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length})
               </button>
               <button
                 onClick={() => setActiveTab('add')}
@@ -615,49 +749,98 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         </div>
 
-        {/* Tab: Companies */}
-        {activeTab === 'companies' && (
+        {/* Tab: Companies / Institutions */}
+        {activeTab === 'companies' && (() => {
+          const filteredInstitutions = companies
+            .filter(c => institutionCategoryFilter === 'all' || c.category === institutionCategoryFilter)
+            .filter(c => !institutionSearchQuery.trim() || normalizeCompanyName(c.companyName).includes(normalizeCompanyName(institutionSearchQuery)))
+            .map(c => ({ company: c, offerCount: getCompanyJobCount(c.id) }))
+            .sort((a, b) => b.offerCount - a.offerCount);
+
+          return (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Validation des Entreprises</h2>
-                <p className="text-sm text-slate-500 mt-1">Examinez les demandes d'inscription et vérifiez le numéro ICE des entreprises.</p>
+                <h2 className="text-xl font-bold text-slate-900">Institutions</h2>
+                <p className="text-sm text-slate-500 mt-1">Écoles, entreprises et institutions publiques : liste, modification et validation ICE.</p>
               </div>
               <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
                 {companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length} en attente
               </span>
             </div>
 
+            {/* Recherche + filtre catégorie */}
+            <div className="p-4 border-b border-slate-200 bg-white flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={institutionSearchQuery}
+                  onChange={(e) => setInstitutionSearchQuery(e.target.value)}
+                  placeholder="Rechercher une institution par nom..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                />
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-xl">
+                <button
+                  onClick={() => setInstitutionCategoryFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${institutionCategoryFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Toutes
+                </button>
+                {COMPANY_CATEGORIES.map(meta => (
+                  <button
+                    key={meta.value}
+                    onClick={() => setInstitutionCategoryFilter(meta.value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${institutionCategoryFilter === meta.value ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {meta.shortLabel}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {isLoadingCompanies ? (
               <div className="flex items-center justify-center py-16 gap-3 text-slate-500">
                 <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                <span>Chargement des entreprises...</span>
+                <span>Chargement des institutions...</span>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
-                      <th className="p-4 font-semibold">Entreprise & Contact</th>
+                      <th className="p-4 font-semibold">Institution</th>
+                      <th className="p-4 font-semibold">Catégorie</th>
                       <th className="p-4 font-semibold">Secteur & Ville</th>
                       <th className="p-4 font-semibold">ICE & Site Web</th>
+                      <th className="p-4 font-semibold text-center">Offres</th>
                       <th className="p-4 font-semibold text-center">Statut</th>
                       <th className="p-4 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm divide-y divide-slate-100">
-                    {companies.map((comp) => (
+                    {filteredInstitutions.map(({ company: comp, offerCount }) => (
                       <tr key={comp.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-200 shrink-0">
-                              {comp.companyName.substring(0, 2).toUpperCase()}
-                            </div>
+                            {comp.logoUrl ? (
+                              <img src={comp.logoUrl} alt={comp.companyName} className="w-10 h-10 rounded-xl object-contain border border-slate-200 bg-white p-1 shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-200 shrink-0">
+                                {comp.companyName.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
                             <div>
                               <p className="font-bold text-slate-900">{comp.companyName}</p>
                               <p className="text-xs text-slate-500">{comp.contactPerson || 'Contact non renseigné'} {comp.phone ? `· ${comp.phone}` : ''}</p>
                             </div>
                           </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-xs font-semibold text-slate-600">
+                            {getCompanyCategoryMeta(comp.category)?.shortLabel || 'Non classée'}
+                          </span>
                         </td>
                         <td className="p-4">
                           <p className="font-semibold text-slate-700">{comp.secteur || 'Non précisé'}</p>
@@ -676,6 +859,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               {comp.website.replace(/^https?:\/\//, '')}
                             </a>
                           )}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="text-xs font-bold text-slate-700">{offerCount}</span>
                         </td>
                         <td className="p-4 text-center">
                           {comp.verificationStatus === 'verified' && (
@@ -698,7 +884,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           )}
                         </td>
                         <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
                             {comp.verificationStatus !== 'verified' && (
                               <button
                                 onClick={() => handleVerifyCompany(comp.id, 'verified')}
@@ -718,14 +904,32 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 Rejeter
                               </button>
                             )}
+                            <button
+                              onClick={() => openEditCompany(comp)}
+                              title="Modifier l'institution"
+                              className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCompany(comp)}
+                              disabled={deletingCompanyId === comp.id || offerCount > 0}
+                              title={offerCount > 0 ? "Impossible de supprimer : des offres sont encore liées à cette institution" : "Supprimer l'institution"}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              {deletingCompanyId === comp.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Trash2 className="w-4 h-4" />
+                              }
+                            </button>
                           </div>
                         </td>
                       </tr>
                     ))}
-                    {companies.length === 0 && (
+                    {filteredInstitutions.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-500">
-                          Aucune entreprise inscrite pour le moment.
+                        <td colSpan={7} className="p-8 text-center text-slate-500">
+                          {companies.length === 0 ? 'Aucune institution enregistrée pour le moment.' : 'Aucune institution ne correspond à votre recherche.'}
                         </td>
                       </tr>
                     )}
@@ -734,7 +938,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Tab: Manage */}
         {activeTab === 'manage' && (
@@ -1485,6 +1690,173 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         )}
 
       </div>
+
+      {/* Modal: Édition d'une institution */}
+      {editingCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900">
+            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 font-serif">Modifier l'institution</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{editingCompany.companyName}</p>
+              </div>
+              <button
+                onClick={closeEditCompany}
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-all"
+                aria-label="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Catégorie */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Catégorie</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {COMPANY_CATEGORIES.map(meta => {
+                    const Icon = meta.value === 'ecole' ? BookOpen : meta.value === 'etat' ? Landmark : Building2;
+                    const isSelected = editCompanyForm.category === meta.value;
+                    return (
+                      <button
+                        key={meta.value}
+                        type="button"
+                        onClick={() => setEditCompanyForm(prev => ({ ...prev, category: meta.value }))}
+                        className={`text-left p-2.5 rounded-xl border-2 transition-all ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                      >
+                        <Icon className={`w-4 h-4 mb-1 ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`} />
+                        <p className={`text-xs font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>{meta.shortLabel}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                {getCompanyJobCount(editingCompany.id) > 0 && editCompanyForm.category !== editingCompany.category && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    Cette institution a {getCompanyJobCount(editingCompany.id)} offre(s) liée(s). Changer sa catégorie modifiera son affichage sur les pages /categories concernées.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nom de l'institution</label>
+                <input
+                  type="text"
+                  value={editCompanyForm.companyName}
+                  onChange={(e) => setEditCompanyForm(prev => ({ ...prev, companyName: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ville</label>
+                  <input
+                    type="text"
+                    value={editCompanyForm.ville}
+                    onChange={(e) => setEditCompanyForm(prev => ({ ...prev, ville: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Secteur</label>
+                  <input
+                    type="text"
+                    value={editCompanyForm.secteur}
+                    onChange={(e) => setEditCompanyForm(prev => ({ ...prev, secteur: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={editCompanyForm.description}
+                  onChange={(e) => setEditCompanyForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white resize-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1 text-right">{editCompanyForm.description.length}/300</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Site web</label>
+                <input
+                  type="url"
+                  value={editCompanyForm.website}
+                  onChange={(e) => setEditCompanyForm(prev => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Logo</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {editCompanyLogoPreview ? (
+                      <img src={editCompanyLogoPreview} alt="Aperçu logo" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <input
+                      ref={editCompanyLogoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={handleEditCompanyLogoChange}
+                      className="hidden"
+                      id="edit-company-logo-upload"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="edit-company-logo-upload"
+                        className="inline-flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        {editCompanyLogoPreview ? 'Remplacer le logo' : 'Choisir un logo'}
+                      </label>
+                      {editCompanyLogoPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveEditCompanyLogo}
+                          className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-3 h-3" />
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">PNG, JPG, SVG, WebP · Max 2 Mo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeEditCompany}
+                className="px-4 py-2.5 text-slate-600 hover:text-slate-900 text-sm font-semibold rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCompanyEdit}
+                disabled={isSavingCompanyEdit || !editCompanyForm.companyName.trim()}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold transition-all shadow-sm"
+              >
+                {isSavingCompanyEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

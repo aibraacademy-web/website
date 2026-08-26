@@ -201,6 +201,54 @@ export const fetchAllCompanies = async (): Promise<Company[]> => {
   return (data || []).map(row => dbToCompany(row as DbCompany));
 };
 
+/** Met à jour les informations d'une institution existante (Action Admin) */
+export const updateCompany = async (
+  companyId: string,
+  payload: {
+    companyName?: string;
+    category?: CompanyCategory;
+    logoUrl?: string | null;
+    ville?: string;
+    secteur?: string;
+    website?: string;
+    description?: string;
+  }
+): Promise<Company> => {
+  const dbPayload: Record<string, any> = {};
+  if (payload.companyName !== undefined) dbPayload.company_name = payload.companyName;
+  if (payload.category !== undefined) dbPayload.category = payload.category;
+  if (payload.logoUrl !== undefined) dbPayload.logo_url = payload.logoUrl;
+  if (payload.ville !== undefined) dbPayload.ville = payload.ville || null;
+  if (payload.secteur !== undefined) dbPayload.secteur = payload.secteur || null;
+  if (payload.website !== undefined) dbPayload.website = payload.website || null;
+  if (payload.description !== undefined) dbPayload.description = payload.description || null;
+
+  const { data, error } = await supabase
+    .from('companies')
+    .update(dbPayload)
+    .eq('id', companyId)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Erreur lors de la mise à jour de l'institution: ${error?.message}`);
+  }
+
+  return dbToCompany(data as DbCompany);
+};
+
+/** Supprime définitivement une institution (Action Admin) — les offres liées voient leur company_id passer à NULL */
+export const deleteCompany = async (companyId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('companies')
+    .delete()
+    .eq('id', companyId);
+
+  if (error) {
+    throw new Error(`Erreur lors de la suppression de l'institution: ${error.message}`);
+  }
+};
+
 /** Valide ou rejette le statut d'une entreprise (Action Admin) */
 export const updateCompanyVerificationStatus = async (
   companyId: string,
