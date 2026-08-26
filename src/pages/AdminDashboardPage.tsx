@@ -4,6 +4,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggleJobActive, updateJobStatus } from '../services/jobService';
 import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany, normalizeCompanyName } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
+import { getApplicationCounts, ApplicationCounts } from '../services/applicationService';
 import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
 import { COMPANY_CATEGORIES } from '../lib/companyCategories';
@@ -137,8 +138,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
+  const [applicationCounts, setApplicationCounts] = useState<Record<string, ApplicationCounts>>({});
+
   useEffect(() => {
     loadJobs();
+    getApplicationCounts().then(setApplicationCounts);
   }, []);
 
   // ─── Logo upload ────────────────────────────────────────────────────────────
@@ -750,6 +754,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <th className="p-4 font-semibold">Lieu & Contrat</th>
                       <th className="p-4 font-semibold text-center">Statut</th>
                       <th className="p-4 font-semibold text-center">Vues</th>
+                      <th className="p-4 font-semibold text-center">Candidatures</th>
                       <th className="p-4 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
@@ -788,6 +793,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         </td>
                         <td className="p-4 text-center">
                           <span className="text-xs text-slate-600">👀 {job.viewsCount || 0}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          {(() => {
+                            const counts = applicationCounts[job.id];
+                            if (!counts || counts.total === 0) {
+                              return <span className="text-xs text-slate-400">📩 0</span>;
+                            }
+                            return (
+                              <span className="text-xs text-slate-600" title={`${counts.direct} directes · ${counts.mailto} via email`}>
+                                📩 {counts.total} ({counts.direct} directes · {counts.mailto} email)
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-2">
