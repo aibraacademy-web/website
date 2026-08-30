@@ -17,10 +17,11 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { NewsBanner } from './NewsBanner';
 
 interface NavbarProps {
   currentTab: string;
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: string, id?: string) => void;
   savedJobsCount: number;
   onOpenSavedModal: () => void;
 }
@@ -37,6 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems: { id: string; label: string; icon?: React.FC<{ className?: string }>; badge?: string }[] = [
     { id: 'home', label: 'Accueil' },
     { id: 'jobs', label: 'Offres d\'emploi', badge: 'Nouveau' },
+    { id: 'actualites', label: 'Actualités' },
     { id: 'about', label: 'À propos' },
     { id: 'contact', label: 'Contact' },
   ];
@@ -54,12 +56,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-md">
-      {/* Top micro banner */}
-      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <Sparkles className="w-3.5 h-3.5 text-emerald-200 animate-pulse" />
-        <span>Plateforme N°1 des offres d'emploi & de stages pour la jeunesse marocaine</span>
-        <span className="hidden sm:inline-block bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">100% Gratuit</span>
-      </div>
+      {/* Top micro banner - Now rotative NewsBanner */}
+      <NewsBanner onNavigate={onNavigate} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">

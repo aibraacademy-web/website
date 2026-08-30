@@ -90,37 +90,29 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h3 className="text-white text-sm font-bold uppercase tracking-wider mb-4 border-l-2 border-emerald-500 pl-2">
               Navigation
             </h3>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2.5 text-sm text-slate-400">
               <li>
-                <button 
-                  onClick={() => onNavigate('home')} 
-                  className="hover:text-emerald-400 transition-colors"
-                >
+                <button onClick={() => onNavigate('home')} className="hover:text-emerald-400 transition-colors">
                   Accueil
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => onNavigate('jobs')} 
-                  className="hover:text-emerald-400 transition-colors"
-                >
+                <button onClick={() => onNavigate('jobs')} className="hover:text-emerald-400 transition-colors">
                   Toutes les offres d'emploi
                 </button>
               </li>
-
               <li>
-                <button 
-                  onClick={() => onNavigate('about')} 
-                  className="hover:text-emerald-400 transition-colors"
-                >
+                <button onClick={() => onNavigate('actualites')} className="hover:text-emerald-400 transition-colors">
+                  Actualités
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('about')} className="hover:text-emerald-400 transition-colors">
                   À propos d'Aibra Academy
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => onNavigate('contact')} 
-                  className="hover:text-emerald-400 transition-colors"
-                >
+                <button onClick={() => onNavigate('contact')} className="hover:text-emerald-400 transition-colors">
                   Contact & Support
                 </button>
               </li>

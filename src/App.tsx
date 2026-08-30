@@ -22,6 +22,8 @@ import { JobListingsPage } from './pages/JobListingsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import { CategoryPage } from './pages/CategoryPage';
 import { CompanyDetailPage } from './pages/CompanyDetailPage';
+import { ActualitesPage } from './pages/ActualitesPage';
+import { ActualiteDetailPage } from './pages/ActualiteDetailPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AboutPage } from './pages/AboutPage';
@@ -54,6 +56,7 @@ export default function App() {
   const [routeJobId, setRouteJobId] = useState<string | null>(null);
   const [routeCompanySlug, setRouteCompanySlug] = useState<string | null>(null);
   const [routeCategory, setRouteCategory] = useState<CompanyCategory | null>(null);
+  const [routeNewsId, setRouteNewsId] = useState<string | null>(null);
   const [mailtoJob, setMailtoJob] = useState<JobOffer | null>(null);
   
   const [isMailModalOpen, setIsMailModalOpen] = useState(false);
@@ -84,6 +87,13 @@ export default function App() {
       const [, category] = cleanPath.split('/');
       return { tab: 'category-page', category };
     }
+    if (cleanPath.startsWith('actualites/')) {
+      const [, id] = cleanPath.split('/');
+      return { tab: 'actualite-detail', newsId: id };
+    }
+    if (cleanPath === 'actualites') {
+      return { tab: 'actualites' };
+    }
     if (cleanPath.startsWith('about')) {
       return { tab: 'about' };
     }
@@ -99,6 +109,7 @@ export default function App() {
     setRouteJobId(initialRoute.jobId || null);
     setRouteCompanySlug(initialRoute.slug || null);
     setRouteCategory((initialRoute.category as CompanyCategory) || null);
+    setRouteNewsId(initialRoute.newsId || null);
 
     const handlePopState = () => {
       const route = resolveRouteFromPath(window.location.pathname, isAdminAuthenticated);
@@ -106,17 +117,20 @@ export default function App() {
       setRouteJobId(route.jobId || null);
       setRouteCompanySlug(route.slug || null);
       setRouteCategory((route.category as CompanyCategory) || null);
+      setRouteNewsId(route.newsId || null);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isAdminAuthenticated]);
 
-  const getPathFromTab = (tab: string, jobId?: string, slug?: string, category?: string) => {
+  const getPathFromTab = (tab: string, jobId?: string, slug?: string, category?: string, newsId?: string) => {
     if (tab === 'jobs') return '/offres';
     if (tab === 'job-detail' && jobId) return `/offres/${jobId}`;
     if (tab === 'company-detail' && slug) return `/entreprises/${slug}`;
     if (tab === 'category-page' && category) return `/categories/${category}`;
+    if (tab === 'actualites') return '/actualites';
+    if (tab === 'actualite-detail' && newsId) return `/actualites/${newsId}`;
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
@@ -208,8 +222,12 @@ export default function App() {
   };
 
   // Navigation helper
-  const handleNavigate = (tab: string, category?: string, city?: string, institutionCategory?: string) => {
+  const handleNavigate = (tab: string, param1?: string, param2?: string, param3?: string) => {
     if (tab === 'jobs') {
+      const category = param1;
+      const city = param2;
+      const institutionCategory = param3;
+      
       setRouteJobId(null);
       setSelectedJob(null);
       setJobFilters({
@@ -221,16 +239,26 @@ export default function App() {
         sortBy: 'latest',
         institutionCategory: institutionCategory || ''
       });
-    } else if (category || city || institutionCategory !== undefined) {
+    } else if (tab === 'jobs' && (param1 || param2 || param3 !== undefined)) {
       setJobFilters(prev => ({
         ...prev,
-        category: category || prev.category,
-        city: city || prev.city,
-        institutionCategory: institutionCategory !== undefined ? institutionCategory : prev.institutionCategory
+        category: param1 || prev.category,
+        city: param2 || prev.city,
+        institutionCategory: param3 !== undefined ? param3 : prev.institutionCategory
       }));
+    } else if (tab === 'actualite-detail' && param1) {
+      setRouteNewsId(param1);
     }
 
-    const route = getPathFromTab(tab);
+    let route = '/';
+    if (tab === 'actualite-detail' && param1) {
+      route = getPathFromTab(tab, undefined, undefined, undefined, param1);
+    } else if (tab === 'jobs' && param3) {
+      route = getPathFromTab(tab, undefined, undefined, param3);
+    } else {
+      route = getPathFromTab(tab);
+    }
+    
     window.history.pushState(null, '', route);
     setCurrentTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -372,6 +400,17 @@ export default function App() {
               onSelectJob={handleSelectJob}
             />
           )
+        )}
+
+        {currentTab === 'actualites' && (
+          <ActualitesPage onNavigate={handleNavigate} />
+        )}
+
+        {currentTab === 'actualite-detail' && routeNewsId && (
+          <ActualiteDetailPage 
+            newsId={routeNewsId} 
+            onBack={() => handleNavigate('actualites')} 
+          />
         )}
 
         {(currentTab === 'admin-login' || currentTab === 'admin-dashboard') && (

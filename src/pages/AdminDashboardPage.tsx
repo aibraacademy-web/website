@@ -32,13 +32,13 @@ import {
   Building,
   Clock,
   Copy,
-  BookOpen,
-  Landmark,
   ChevronRight,
-  Search,
   Pencil,
-  Save
+  Save,
+  Newspaper,
+  Search
 } from 'lucide-react';
+import { AdminNewsTab } from './AdminNewsTab';
 
 interface AdminDashboardPageProps {
   onJobAdded: (newJob: JobOffer) => void;
@@ -53,7 +53,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onJobUpdated,
   onAllJobsCleared
 }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation' | 'companies'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation' | 'companies' | 'news'>('manage');
   const [jobs, setJobs] = useState<JobOffer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
@@ -832,6 +832,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 Institutions ({companies.filter(c => c.verificationStatus === 'pending' || !c.verificationStatus).length})
               </button>
               <button
+                onClick={() => setActiveTab('news')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'news' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Newspaper className="w-4 h-4" />
+                Actualités
+              </button>
+              <button
                 onClick={() => setActiveTab('add')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'add' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
@@ -841,6 +848,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Tab: Actualités */}
+        {activeTab === 'news' && (
+          <AdminNewsTab />
+        )}
 
         {/* Tab: Companies / Institutions */}
         {activeTab === 'companies' && (() => {

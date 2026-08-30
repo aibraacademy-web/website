@@ -18,6 +18,8 @@ export type JobCategory =
   | 'Juridique'
   | 'Autre';
 
+export type NewsCategory = 'Éducation & Inscriptions' | 'Conseils Carrière' | 'Annonces Officielles';
+
 export type MoroccanCity = 
   | 'Agadir'
   | 'Al Hoceïma'
@@ -181,6 +183,22 @@ export interface StatisticsData {
   totalApplicationsSent: number;
 }
 
+export interface NewsPost {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: NewsCategory;
+  imageUrl?: string;
+  externalLink?: string;
+  isPinned: boolean;
+  publishedAt: string; // ISO string
+  publishedAtDisplay: string; // Formatted relative string
+  expiresAt?: string; // ISO string
+  isActive: boolean;
+  createdAt: string; // ISO string
+}
+
 // ─── Supabase DB Row Type (snake_case) ────────────────────────────────────────
 
 export interface DbProfile {
@@ -257,6 +275,22 @@ export interface DbJobOffer {
     category?: string;
     slug?: string;
   }[];
+}
+
+export interface DbNewsPost {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  image_url: string | null;
+  external_link: string | null;
+  is_pinned: boolean;
+  published_at: string;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Conversion helpers ────────────────────────────────────────────────────────
@@ -365,4 +399,21 @@ export const dbToCompany = (row: DbCompany, profile?: { role?: string; created_a
   linkedinUrl: row.linkedin_url || undefined,
   verificationStatus: (row.verification_status as VerificationStatus) || 'pending',
   rejectionReason: row.rejection_reason || undefined,
+});
+
+/** Convertit une ligne DB → NewsPost applicatif */
+export const dbToNewsPost = (row: DbNewsPost): NewsPost => ({
+  id: row.id,
+  title: row.title,
+  summary: row.summary,
+  content: row.content,
+  category: row.category as NewsCategory,
+  imageUrl: row.image_url ?? undefined,
+  externalLink: row.external_link ?? undefined,
+  isPinned: row.is_pinned,
+  publishedAt: row.published_at,
+  publishedAtDisplay: formatPublishedAt(row.published_at),
+  expiresAt: row.expires_at ?? undefined,
+  isActive: row.is_active,
+  createdAt: row.created_at,
 });
