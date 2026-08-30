@@ -36,7 +36,9 @@ import {
   Pencil,
   Save,
   Newspaper,
-  Search
+  Search,
+  BookOpen,
+  Landmark
 } from 'lucide-react';
 import { AdminNewsTab } from './AdminNewsTab';
 
