@@ -41,6 +41,7 @@ import {
   Landmark
 } from 'lucide-react';
 import { AdminNewsTab } from './AdminNewsTab';
+import { AdminLibraryTab } from './AdminLibraryTab';
 
 interface AdminDashboardPageProps {
   onJobAdded: (newJob: JobOffer) => void;
@@ -55,7 +56,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onJobUpdated,
   onAllJobsCleared
 }) => {
-  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation' | 'companies' | 'news'>('manage');
+  const [activeTab, setActiveTab] = useState<'manage' | 'add' | 'moderation' | 'companies' | 'news' | 'library'>('manage');
   const [jobs, setJobs] = useState<JobOffer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
@@ -841,6 +842,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 Actualités
               </button>
               <button
+                onClick={() => setActiveTab('library')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'library' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Bibliothèque
+              </button>
+              <button
                 onClick={() => setActiveTab('add')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'add' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
@@ -854,6 +862,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* Tab: Actualités */}
         {activeTab === 'news' && (
           <AdminNewsTab />
+        )}
+
+        {/* Tab: Bibliothèque */}
+        {activeTab === 'library' && (
+          <AdminLibraryTab />
         )}
 
         {/* Tab: Companies / Institutions */}

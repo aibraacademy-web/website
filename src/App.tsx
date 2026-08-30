@@ -24,6 +24,7 @@ import { CategoryPage } from './pages/CategoryPage';
 import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { ActualitesPage } from './pages/ActualitesPage';
 import { ActualiteDetailPage } from './pages/ActualiteDetailPage';
+import { BibliothequePage } from './pages/BibliothequePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AboutPage } from './pages/AboutPage';
@@ -94,6 +95,9 @@ export default function App() {
     if (cleanPath === 'actualites') {
       return { tab: 'actualites' };
     }
+    if (cleanPath === 'bibliotheque') {
+      return { tab: 'bibliotheque' };
+    }
     if (cleanPath.startsWith('about')) {
       return { tab: 'about' };
     }
@@ -131,6 +135,7 @@ export default function App() {
     if (tab === 'category-page' && category) return `/categories/${category}`;
     if (tab === 'actualites') return '/actualites';
     if (tab === 'actualite-detail' && newsId) return `/actualites/${newsId}`;
+    if (tab === 'bibliotheque') return '/bibliotheque';
     if (tab === 'about') return '/about';
     if (tab === 'contact') return '/contact';
     if (tab === 'admin-login' || tab === 'admin-dashboard') return '/admin';
@@ -404,6 +409,10 @@ export default function App() {
 
         {currentTab === 'actualites' && (
           <ActualitesPage onNavigate={handleNavigate} />
+        )}
+
+        {currentTab === 'bibliotheque' && (
+          <BibliothequePage />
         )}
 
         {currentTab === 'actualite-detail' && routeNewsId && (

@@ -417,3 +417,53 @@ export const dbToNewsPost = (row: DbNewsPost): NewsPost => ({
   isActive: row.is_active,
   createdAt: row.created_at,
 });
+
+// ─── Library Files Types ────────────────────────────────────────────────────────
+
+export type LibraryCategory = 'Modèles CV' | 'Guides & Conseils' | 'Documents officiels' | 'Formulaires' | 'Autre';
+
+export interface LibraryFile {
+  id: string;
+  title: string;
+  description?: string;
+  category: LibraryCategory;
+  fileUrl: string;
+  fileType: string;
+  fileSizeKb?: number;
+  downloadCount: number;
+  isActive: boolean;
+  publishedAt: string; // ISO string
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+}
+
+export interface DbLibraryFile {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  file_url: string;
+  file_type: string;
+  file_size_kb: number | null;
+  download_count: number;
+  is_active: boolean;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const dbToLibraryFile = (row: DbLibraryFile): LibraryFile => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? undefined,
+  category: row.category as LibraryCategory,
+  fileUrl: row.file_url,
+  fileType: row.file_type,
+  fileSizeKb: row.file_size_kb ?? undefined,
+  downloadCount: row.download_count,
+  isActive: row.is_active,
+  publishedAt: row.published_at,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+

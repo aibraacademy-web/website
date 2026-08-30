@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'home', label: 'Accueil' },
     { id: 'jobs', label: 'Offres d\'emploi', badge: 'Nouveau' },
     { id: 'actualites', label: 'Actualités' },
+    { id: 'bibliotheque', label: 'Bibliothèque' },
     { id: 'about', label: 'À propos' },
     { id: 'contact', label: 'Contact' },
   ];
