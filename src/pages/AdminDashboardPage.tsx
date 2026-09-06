@@ -5,7 +5,6 @@ import { fetchAllJobs, createJobOffer, deleteJobOffer, clearAllJobOffers, toggle
 import { fetchAllCompanies, updateCompanyVerificationStatus, createCompany, updateCompany, deleteCompany, normalizeCompanyName } from '../services/companyService';
 import { uploadLogo, deleteLogo } from '../services/storageService';
 import { getApplicationCounts, ApplicationCounts } from '../services/applicationService';
-import { parseJobText } from '../services/jobParserService';
 import { supabase } from '../lib/supabaseClient';
 import { COMPANY_CATEGORIES, getCompanyCategoryMeta } from '../lib/companyCategories';
 import {
@@ -75,9 +74,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // LinkedIn paste parser
   const [linkedInText, setLinkedInText] = useState('');
-  const [isParsing, setIsParsing] = useState(false);
   const [parseNotice, setParseNotice] = useState<{ message: string, type: 'success' | 'warning' } | null>(null);
-  const [undetectedFields, setUndetectedFields] = useState<string[]>([]);
 
   // Sélection institution (flow séquentiel du formulaire "Ajouter")
   const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | ''>('');
@@ -223,66 +220,30 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     if (newCompanyLogoInputRef.current) newCompanyLogoInputRef.current.value = '';
   };
 
-  // ─── LinkedIn parser ────────────────────────────────────────────────────────
-
-  const handleParseText = async () => {
-    const raw = linkedInText.trim();
-    if (!raw) {
-      setParseNotice({ message: 'Veuillez coller un texte avant d\'analyser.', type: 'warning' });
-      setUndetectedFields([]);
-      return;
-    }
-
-    setIsParsing(true);
-    setParseNotice(null);
-    try {
-      const parsed = await parseJobText(raw);
-      
-      setFormData(prev => ({
-        ...prev,
-        title: parsed.title || prev.title,
-        city: parsed.city || prev.city,
-        category: parsed.category || prev.category,
-        contractType: parsed.contractType || prev.contractType,
-        experienceLevel: parsed.experienceLevel || prev.experienceLevel,
-        salaryRange: parsed.salaryRange || prev.salaryRange,
-        description: parsed.description || prev.description,
-        contactEmail: parsed.contactEmail || prev.contactEmail,
-        contactSubject: parsed.contactSubject || prev.contactSubject,
-        originalLink: parsed.originalLink || prev.originalLink
-      }));
-
-      const detected = [];
-      const missing = [];
-
-      if (parsed.title) detected.push('Titre'); else missing.push('Titre');
-      if (parsed.city) detected.push('Ville');
-      if (parsed.category) detected.push('Secteur');
-      if (parsed.contractType) detected.push('Contrat');
-      if (parsed.experienceLevel) detected.push('Expérience');
-
-      setUndetectedFields(missing);
-
-      if (detected.length > 0) {
-        setParseNotice({
-          message: `${detected.length} champs détectés automatiquement.`,
-          type: 'success'
-        });
-      } else {
-        setParseNotice({
-          message: 'Aucun champ reconnu automatiquement.',
-          type: 'warning'
-        });
-      }
-    } catch (err) {
-      console.error('Erreur analyse texte:', err);
+  // ─── LinkedIn paste (Direct to description sans transformation) ────────────
+  const handleLinkedInTextChange = (text: string) => {
+    setLinkedInText(text);
+    setFormData(prev => ({
+      ...prev,
+      description: text
+    }));
+    if (text.trim()) {
       setParseNotice({
-        message: 'Erreur lors de l\'analyse du texte.',
-        type: 'warning'
+        message: 'Texte copié intégralement dans la description. Tous les champs structurés ci-dessous sont désormais optionnels.',
+        type: 'success'
       });
-    } finally {
-      setIsParsing(false);
+    } else {
+      setParseNotice(null);
     }
+  };
+
+  const handleClearLinkedInText = () => {
+    setLinkedInText('');
+    setParseNotice(null);
+    setFormData(prev => ({
+      ...prev,
+      description: ''
+    }));
   };
 
   // ─── Soumission du formulaire ───────────────────────────────────────────────
@@ -299,7 +260,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setDuplicatedLogoUrl(null);
     setLinkedInText('');
     setParseNotice(null);
-    setUndetectedFields([]);
     setSelectedCategory('');
     setSelectedCompanyId('');
     setIsAddingNewCompany(false);
@@ -368,7 +328,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
     setLinkedInText('');
     setParseNotice(null);
-    setUndetectedFields([]);
 
     // Basculer vers l'onglet "Ajouter"
     setActiveTab('add');
@@ -385,6 +344,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       return;
     }
 
+    // Si on a collé un texte mais laissé des champs vides, on met des valeurs par défaut
+    let finalTitle = formData.title.trim();
+    if (!finalTitle && formData.description.trim()) {
+      const lines = formData.description.split('\n').map(l => l.trim()).filter(Boolean);
+      finalTitle = lines.length > 0 ? lines[0].substring(0, 100) : 'Offre sans titre';
+    } else if (!finalTitle) {
+      alert("Le titre est requis si la description est vide.");
+      return;
+    }
+
+    const finalCompany = formData.company.trim() || 'Non renseigné';
+    const finalCategory = formData.category || 'Autre';
+    const finalCity = formData.city || 'Autre ville';
+    const finalContractType = formData.contractType || 'CDI';
+    const finalExperienceLevel = formData.experienceLevel || 'Tous niveaux';
+    const finalContactEmail = formData.contactEmail || 'contact@aibra.ma';
+
     setIsSubmitting(true);
     try {
       // 1. Upload logo si présent, sinon réutiliser l'URL dupliquée (ou le logo de l'institution)
@@ -396,20 +372,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       }
 
       // 2. Préparer les données
-      const initials = formData.company.trim() ? formData.company.trim().split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'EC';
+      const initials = finalCompany !== 'Non renseigné' 
+        ? finalCompany.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() 
+        : 'EC';
 
       // 3. Insérer dans Supabase
       const created = await createJobOffer({
-        title: formData.title,
-        company: formData.company,
+        title: finalTitle,
+        company: finalCompany,
         companyId: selectedCompanyId || undefined,
         companyInitials: initials,
         companyLogo: logoUrl,
-        category: formData.category,
-        city: formData.city,
-        contractType: formData.contractType,
-        experienceLevel: formData.experienceLevel,
-        contactEmail: formData.contactEmail,
+        category: finalCategory,
+        city: finalCity,
+        contractType: finalContractType,
+        experienceLevel: finalExperienceLevel,
+        contactEmail: finalContactEmail,
         contactPhone: formData.contactPhone || undefined,
         contactSubject: formData.contactSubject || undefined,
         salaryRange: formData.salaryRange || 'A négocier',
@@ -1292,62 +1270,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                 {/* Section: LinkedIn paste */}
                 <div className="space-y-4 pb-6 border-b border-slate-200 bg-slate-50 p-4 rounded-3xl">
-                  <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-sky-700" />
-                    Coller depuis LinkedIn / texte
-                  </h2>
-                  <p className="text-sm text-slate-600">Collez une offre brute pour pré-remplir le formulaire automatiquement.</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-extrabold text-slate-900 font-serif flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-sky-700" />
+                        Coller depuis LinkedIn / texte
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-0.5">Collez directement le texte brut d'une offre pour le publier fidèlement tel quel sans reformatage.</p>
+                    </div>
+                  </div>
                   <textarea
-                    rows={4}
+                    rows={5}
                     value={linkedInText}
-                    onChange={(e) => { setLinkedInText(e.target.value); setParseNotice(null); setUndetectedFields([]); }}
-                    placeholder="Exemple : Offre d'emploi : Chargé(e) de recrutement chez ABC Consulting - CDI - Casablanca"
-                    className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-sky-500"
+                    onChange={(e) => handleLinkedInTextChange(e.target.value)}
+                    placeholder="Collez ici le texte brut copié depuis LinkedIn ou toute autre source..."
+                    className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-sky-500 font-sans leading-relaxed whitespace-pre-wrap"
                   />
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      type="button"
-                      onClick={handleParseText}
-                      disabled={isParsing}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-3 text-sm font-semibold hover:bg-slate-800 disabled:opacity-60 transition-all"
-                    >
-                      {isParsing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Analyse en cours...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          <span>Analyser le texte</span>
-                        </>
-                      )}
-                    </button>
-                    <button type="button" disabled={isParsing} onClick={() => { setLinkedInText(''); setParseNotice(null); setUndetectedFields([]); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 transition-all">
-                      <Trash2 className="w-4 h-4" />
-                      Effacer
-                    </button>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <p className="text-xs text-slate-500 italic">
+                      ✨ Les champs ci-dessous (titre, entreprise, contrat...) sont facultatifs. La première ligne servira de titre si laissé vide.
+                    </p>
+                    {linkedInText && (
+                      <button
+                        type="button"
+                        onClick={handleClearLinkedInText}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Effacer
+                      </button>
+                    )}
                   </div>
                   
                   {parseNotice && (
-                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${parseNotice.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                      <p className="font-semibold flex items-center gap-2">
-                        {parseNotice.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                        {parseNotice.message}
-                      </p>
-                      
-                      {undetectedFields.length > 0 && (
-                        <div className="text-sm">
-                          <p className="mb-1 font-medium text-amber-700">⚠️ Non détecté — vérifiez ces champs manuellement :</p>
-                          <div className="flex flex-wrap gap-2">
-                            {undetectedFields.map(field => (
-                              <span key={field} className="px-2 py-1 bg-white/60 border border-amber-200 rounded text-xs font-semibold">
-                                {field}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                    <div className="p-3.5 rounded-xl border flex items-center gap-2 bg-emerald-50 border-emerald-200 text-emerald-800 text-xs sm:text-sm font-semibold">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                      <span>{parseNotice.message}</span>
                     </div>
                   )}
                 </div>
@@ -1780,7 +1738,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     <textarea
                       rows={12}
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, description: val });
+                        setLinkedInText(val);
+                      }}
                       placeholder="Décrivez le poste, les missions, le profil recherché et les avantages librement..."
                       className="w-full px-3.5 py-3 rounded-2xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 font-sans leading-relaxed whitespace-pre-wrap"
                     />

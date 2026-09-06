@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { JobOffer } from '../types';
 import { SimilarJobs } from '../components/SimilarJobs';
-import { cleanDescription } from '../services/jobParserService';
 import { 
   Building2, 
   MapPin, 
@@ -51,7 +50,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
 
   // Assembler la description complète avec rétrocompatibilité pour les offres existantes
   const getFullDescription = (): string => {
-    let base = cleanDescription(job.description || '', job.company);
+    let base = job.description || '';
     
     // Si l'offre ancienne a déjà des champs missions / profil séparés et qu'ils ne sont pas déjà inclus dans description
     const hasMissionsInDesc = base.toLowerCase().includes('mission');

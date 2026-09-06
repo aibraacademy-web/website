@@ -313,9 +313,9 @@ export const AdminNewsTab: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 mb-1">
                       {post.isActive ? (
-                        <StatusBadge status="approved" text="En ligne" />
+                        <StatusBadge status="approved" />
                       ) : (
-                        <StatusBadge status="rejected" text="Hors ligne" />
+                        <StatusBadge status="rejected" />
                       )}
                     </div>
                     <div className="text-xs text-slate-500">{post.publishedAtDisplay}</div>
