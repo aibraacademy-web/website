@@ -62,7 +62,7 @@ export const MailtoModal: React.FC<MailtoModalProps> = ({ job, isOpen, onClose }
 
   const handleLaunchEmail = () => {
     setSentNotice(true);
-    window.open(mailtoUrl, '_blank');
+    window.location.href = mailtoUrl;
     // Tracking best-effort : ne doit jamais bloquer ni retarder l'ouverture du client mail.
     submitApplication({ method: 'mailto', job, candidateName, candidateMessage }).catch(() => {});
   };
