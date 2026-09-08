@@ -27,6 +27,11 @@ export const SimilarJobs: React.FC<SimilarJobsProps> = ({
 
   if (similar.length === 0) return null;
 
+  const catStr = (currentJob.category as string) || '';
+  const cityStr = (currentJob.city as string) || '';
+  const isCatDefault = !catStr || catStr === 'Autre' || catStr === 'Non spécifié';
+  const isCityDefault = !cityStr || cityStr === 'Autre ville' || cityStr === 'Non renseigné' || cityStr === 'Maroc';
+
   return (
     <section className="pt-12 mt-12 border-t border-slate-200">
       <div className="mb-6">
@@ -38,7 +43,13 @@ export const SimilarJobs: React.FC<SimilarJobsProps> = ({
           Suggestions d'offres similaires
         </h3>
         <p className="text-xs text-slate-600 mt-1">
-          D'autres opportunités dans le secteur {currentJob.category} ou à {currentJob.city}.
+          {!isCatDefault && !isCityDefault
+            ? `D'autres opportunités dans le secteur ${currentJob.category} ou à ${currentJob.city}.`
+            : !isCatDefault
+            ? `D'autres opportunités dans le secteur ${currentJob.category}.`
+            : !isCityDefault
+            ? `D'autres opportunités à ${currentJob.city}.`
+            : "D'autres opportunités d'emploi récemment publiées."}
         </p>
       </div>
 
